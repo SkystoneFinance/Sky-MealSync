@@ -1,0 +1,128 @@
+/* ===========================
+   Tailwind CSS v4
+=========================== */
+
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap");
+
+/* ===========================
+   Theme Variables
+=========================== */
+
+:root {
+  /* Colors */
+  --background: #ffffff;
+  --foreground: #6b7280;
+  --primary: #991b1b;
+  --primary-foreground: #ffffff;
+
+  --border: #e5e7eb;
+  --card: #ffffff;
+  --muted: #f8fafc;
+
+  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+
+  /* Typography */
+  --font-sans: "Jost", sans-serif;
+  --font-heading: "Jost", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+/* ===========================
+   Global Reset
+=========================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===========================
+   Body
+=========================== */
+
+body {
+  font-family: var(--font-sans);
+  background: var(--background);
+  color: var(--foreground);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  overflow-x: hidden;
+}
+
+/* ===========================
+   Typography
+=========================== */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  color: #111827;
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+p {
+  margin: 0;
+}
+
+/* ===========================
+   Form Elements
+=========================== */
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+input,
+textarea,
+select {
+  outline: none;
+}
+
+/* ===========================
+   Images
+=========================== */
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* ===========================
+   Links
+=========================== */
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
