@@ -2,9 +2,9 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import AdminLayout from "../layout/dashboardLayout";
 
-import Dashboard from "../../common/dashboard/dashboard";
-import CheckMeal from "../../common/dashboard/dashboard";
-import History from "../../common/dashboard/dashboard";
+import Dashboard from "../../components/dashboard/dashboard";
+import CheckMeal from "../../components/dashboard/dashboard";
+import History from "../../components/dashboard/dashboard";
 // import Scan from "../../pages/scan";
 
 export default function AppRoutes() {

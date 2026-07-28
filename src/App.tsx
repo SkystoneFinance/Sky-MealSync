@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router-dom";
-import Dashboard from "./common/dashboard/dashboard";
+import Dashboard from "./components/dashboard/dashboard";
 // import Home from "./commons/pages/publicSection/home";
 
 function App() {

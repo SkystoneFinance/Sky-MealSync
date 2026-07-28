@@ -1,7 +1,13 @@
 export const queryKeys = {
-  dashboard: ["dashboard"] as const,
+  dashboard: ["dashboard"],
 
-  meals: ["meals"] as const,
+  recentAttendance: ["recent-attendance"],
 
-  history: ["history"] as const,
-};
+  departmentSummary: ["department-summary"],
+
+  staff: ["staff"],
+
+  attendance: ["attendance"],
+
+  reports: ["reports"],
+} as const;
