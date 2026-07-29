@@ -1,58 +1,68 @@
 import DashboardHeader from "./DashboardHeader";
 import StatsSection from "./statsSection";
+import RecentAttendance from "./RecentAttendance";
+import DepartmentSummary from "./DepartmentSummary";
 
 import { useDashboard } from "../../hooks/useDashboard";
+import { useRecentAttendance } from "../../hooks/useRecentAttendance";
+import { useDepartmentSummary } from "../../hooks/useDepartmentSummary";
 
+export default function Dashboard() {
+  const {
+    data: stats,
+    isPending,
+    isError,
+  } = useDashboard();
 
-export default function Dashboard(){
+  const {
+    data: recentAttendance,
+    isPending: attendanceLoading,
+  } = useRecentAttendance();
 
+  const {
+    data: departmentSummary,
+    isPending: departmentLoading,
+  } = useDepartmentSummary();
 
-const {
- data,
- isPending,
- isError
+  if (isPending) {
+    return (
+      <div className="p-6">
+        Loading Dashboard...
+      </div>
+    );
+  }
 
-}=useDashboard();
+  if (isError || !stats) {
+    return (
+      <div className="p-6 text-red-600">
+        Unable to load dashboard.
+      </div>
+    );
+  }
 
+  return (
+    <div className="space-y-8">
 
+      <DashboardHeader />
 
-if(isPending){
+      <StatsSection
+        stats={stats}
+      />
 
- return <p>Loading dashboard...</p>;
+      <div className="grid gap-6 lg:grid-cols-2">
 
-}
+        <RecentAttendance
+          loading={attendanceLoading}
+          data={recentAttendance ?? []}
+        />
 
+        <DepartmentSummary
+          loading={departmentLoading}
+          data={departmentSummary ?? []}
+        />
 
+      </div>
 
-if(isError || !data){
-
- return (
- <p>
- Unable to load dashboard
- </p>
- );
-
-}
-
-
-
-return (
-
-<div className="space-y-7">
-
-
-<DashboardHeader/>
-
-
-<StatsSection
- stats={data}
-/>
-
-
-</div>
-
-
-);
-
-
+    </div>
+  );
 }

@@ -4,6 +4,7 @@ import {
   UtensilsCrossed,
   History,
   Scan,
+  Users,
 } from "lucide-react";
 
 import SidebarItem from "./sidebarItem";
@@ -31,6 +32,11 @@ const menu = [
     path: "/scan",
     icon: Scan,
   },
+  {
+  title: "Staff Management",
+  path: "/staff",
+  icon: Users,
+},
 ];
 
 export default function Sidebar() {

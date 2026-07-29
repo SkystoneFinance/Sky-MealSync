@@ -5,7 +5,8 @@ import AdminLayout from "../layout/dashboardLayout";
 import Dashboard from "../../components/dashboard/dashboard";
 import CheckMeal from "../../components/dashboard/dashboard";
 import History from "../../components/dashboard/dashboard";
-// import Scan from "../../pages/scan";
+import Staffs from "../../components/stafff/staff";
+import Scan from "../../components/scan/scan";
 
 export default function AppRoutes() {
   return (
@@ -29,14 +30,17 @@ export default function AppRoutes() {
           path="history"
           element={<History />}
         />
+        {/* Staff Management */}
+        <Route
+          path="staff"
+          element={<Staffs />}
+        />
 
         {/* Scan */}
-        {/*
         <Route
           path="scan"
           element={<Scan />}
         />
-        */}
       </Route>
 
       {/* Redirect unknown routes */}
