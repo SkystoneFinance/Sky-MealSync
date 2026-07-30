@@ -4,7 +4,10 @@ Utensils,
 Percent
 } from "lucide-react";
 
-import type {ReportSummary} from "../../services/report.service";
+
+import type {
+ReportSummary
+} from "../../types/report";
 
 
 

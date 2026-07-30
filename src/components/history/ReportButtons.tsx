@@ -8,20 +8,18 @@ downloadCSV
 
 
 import {
-useHistory
-} from "../../hooks/useHistory";
+useWeeklyReport,
+useMonthlyReport
+} from "../../hooks/useReport";
 
 
 
 export default function ReportButtons(){
 
 
-const {
-weekly,
-monthly
+const weekly = useWeeklyReport();
 
-}=useHistory();
-
+const monthly = useMonthlyReport();
 
 
 async function weeklyDownload(){
