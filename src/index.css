@@ -82,8 +82,8 @@ button {
   border: none;
   outline: none;
 }
-::active button {
-  scale: 95;
+button:active {
+  transform: scale(0.95);
 }
 
 input,

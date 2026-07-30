@@ -1,119 +1,51 @@
-import axios from "../lib/axios";
+// import axios from "../lib/axios";
 
+// import type {
+// AttendanceRecord
+// } from "../types/history";
 
-import type {
 
-AttendanceRecord,
+// interface ApiResponse<T>{
 
-ReportSummary,
+// success:boolean;
 
-DepartmentReport
+// data:T;
 
-} from "../types/history";
+// }
 
 
 
-interface ApiResponse<T>{
+// export const attendanceService={
 
-success:boolean;
 
-data:T;
+// async history(){
 
-message?:string;
+// const response =
+// await axios.get<
+// ApiResponse<AttendanceRecord[]>
+// >(
+// "/attendance/history"
+// );
 
-}
 
+// return response.data.data;
 
 
-export const historyService = {
+// },
 
 
 
-async getAttendanceHistory(){
+// async staffHistory(id:string){
 
+// const response =
+// await axios.get(
+// `/attendance/staff/${id}`
+// );
 
-const response = await axios.get<
-ApiResponse<AttendanceRecord[]>
->(
 
-"/attendance/history"
+// return response.data.data;
 
-);
 
+// }
 
-return response.data.data;
-
-
-},
-
-
-
-
-
-async getWeeklyReport(){
-
-
-const response =
-await axios.get<
-ApiResponse<ReportSummary>
->(
-
-"/reports/weekly"
-
-);
-
-
-
-return response.data.data;
-
-
-},
-
-
-
-
-
-async getMonthlyReport(){
-
-
-const response =
-await axios.get<
-ApiResponse<ReportSummary>
->(
-
-"/reports/monthly"
-
-);
-
-
-
-return response.data.data;
-
-
-},
-
-
-
-
-
-async getDepartmentReport(){
-
-
-const response =
-await axios.get<
-ApiResponse<DepartmentReport[]>
->(
-
-"/reports/departments"
-
-);
-
-
-
-return response.data.data;
-
-
-}
-
-
-};
+// }
