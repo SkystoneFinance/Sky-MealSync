@@ -9,25 +9,6 @@
    Theme Variables
 =========================== */
 
-:root {
-  /* Colors */
-  --background: #ffffff;
-  --foreground: #6b7280;
-  --primary: #991b1b;
-  --primary-foreground: #ffffff;
-
-  --border: #e5e7eb;
-  --card: #ffffff;
-  --muted: #f8fafc;
-
-  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-
-  /* Typography */
-  --font-sans: "Jost", sans-serif;
-  --font-heading: "Jost", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
-}
-
 /* ===========================
    Global Reset
 =========================== */
@@ -100,7 +81,9 @@ button {
   cursor: pointer;
   border: none;
   outline: none;
-  background: transparent;
+}
+::active button {
+  scale: 95;
 }
 
 input,

@@ -13,7 +13,7 @@ export default function DashboardHeader() {
         Dashboard
       </h1>
 
-      <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm">
+      <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-red-800 px-4 py-2 shadow-sm">
         <UserRound size={18} />
 
         <span className="text-sm font-medium">
