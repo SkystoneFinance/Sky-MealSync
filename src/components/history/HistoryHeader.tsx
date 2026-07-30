@@ -44,7 +44,7 @@ export default function HistoryHeader({
 
       <button
         onClick={download}
-        className=" flex items-center gap-2 rounded-xl bg-[#B10F16] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#8D0B11]"
+        className="flex items-center gap-2 rounded-xl bg-[#B10F16] px-5 py-3 font-semibold text-white"
       >
         <Download size={18} />
 
