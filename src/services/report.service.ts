@@ -9,7 +9,7 @@ export const reportService = {
   async today() {
     const response =
       await axios.get<ReportSummary>(
-        "/report/today"
+        "/reports/today"
       );
 
     return response.data;
@@ -18,7 +18,7 @@ export const reportService = {
   async weekly() {
     const response =
       await axios.get<ReportSummary>(
-        "/report/weekly"
+        "/reports/weekly"
       );
 
     return response.data;
@@ -27,7 +27,7 @@ export const reportService = {
   async monthly() {
     const response =
       await axios.get<ReportSummary>(
-        "/report/monthly"
+        "/reports/monthly"
       );
 
     return response.data;
@@ -41,7 +41,7 @@ export const reportService = {
         success: boolean;
         data: StaffMealSummary[];
       }>(
-        `/report/staff-summary?period=${period}`
+        `/reports/staff-summary?period=${period}`
       );
 
     return response.data.data;
@@ -52,7 +52,7 @@ export const reportService = {
   ) {
     const response =
       await axios.get(
-        `/report/export?period=${period}`,
+        `/reports/export?period=${period}`,
         {
           responseType: "blob",
         }

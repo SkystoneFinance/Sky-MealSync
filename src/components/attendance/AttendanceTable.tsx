@@ -1,70 +1,82 @@
-import type {
-  StaffMealSummary,
-} from "../../types/report";
+import type { Attendance } from "../../types/attendance";
 
 interface Props {
-  data: StaffMealSummary[];
+  attendance: Attendance[];
 }
 
 export default function AttendanceTable({
-  data,
+  attendance,
 }: Props) {
-  if (!data.length) {
-    return (
-      <div className="rounded-2xl border bg-white p-10 text-center text-gray-500">
-        No records found.
-      </div>
-    );
-  }
-
   return (
     <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
-      <table className="w-full">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="px-6 py-4 text-left">Staff No</th>
-            <th className="px-6 py-4 text-left">Name</th>
-            <th className="px-6 py-4 text-left">Department</th>
-            <th className="px-6 py-4 text-center">Meals</th>
-            <th className="px-6 py-4 text-left">Last Meal</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {data.map((staff) => (
-            <tr
-              key={staff.staffId}
-              className="border-b"
-            >
-              <td className="px-6 py-4">
-                {staff.staffNumber}
-              </td>
-
-              <td className="px-6 py-4 font-semibold">
-                {staff.name}
-              </td>
-
-              <td className="px-6 py-4">
-                {staff.department}
-              </td>
-
-              <td className="px-6 py-4 text-center">
-                <span className="rounded-full bg-red-100 px-3 py-1 font-semibold text-red-700">
-                  {staff.mealCount}
-                </span>
-              </td>
-
-              <td className="px-6 py-4">
-                {staff.lastMeal
-                  ? new Date(
-                      staff.lastMeal
-                    ).toLocaleString()
-                  : "--"}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr className="border-b text-left text-sm font-semibold text-gray-600">
+              <th className="px-6 py-4">Name</th>
+              <th className="px-6 py-4">Staff Number</th>
+              <th className="px-6 py-4">Department</th>
+              <th className="px-6 py-4">Scanned Time</th>
+              <th className="px-6 py-4">Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {attendance.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="py-12 text-center text-gray-500"
+                >
+                  No attendance records found.
+                </td>
+              </tr>
+            ) : (
+              attendance.map((item) => (
+                <tr
+                  key={item.id}
+                  className="border-b transition hover:bg-gray-50 last:border-none"
+                >
+                  <td className="px-6 py-5">
+                    <div>
+                      <p className="font-semibold">
+                        {item.staff.firstName}{" "}
+                        {item.staff.lastName}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        ID: {item.staff.id.slice(0, 8)}...
+                      </p>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-5">
+                    {item.staff.staffNumber}
+                  </td>
+
+                  <td className="px-6 py-5">
+                    {item.staff.department}
+                  </td>
+
+                  <td className="px-6 py-5">
+                    {new Date(item.scannedAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}
+                  </td>
+
+                  <td className="px-6 py-5">
+                    <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+                      Served
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

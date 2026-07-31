@@ -82,7 +82,7 @@ button {
   border: none;
   outline: none;
 }
-button:active {
+.button:active {
   transform: scale(0.95);
 }
 
