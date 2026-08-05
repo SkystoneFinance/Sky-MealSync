@@ -23,7 +23,7 @@ const AdminLayout: React.FC = () => {
         />
 
         {/* Page */}
-        <main className="pt-24 px-6 pb-6">
+        <main className="pt-24 pt-35 px-6 pb-6">
           <Outlet />
         </main>
       </div>

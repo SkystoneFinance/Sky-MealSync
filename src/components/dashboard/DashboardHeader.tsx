@@ -7,17 +7,17 @@ export default function DashboardHeader() {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: .35 }}
-      className="flex items-center justify-between"
+      className="flex items-center justify-between sm:py-8 lg:py-10"
     >
-      <h1 className="text-4xl font-bold tracking-tight text-black">
+      <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-black">
         Dashboard
       </h1>
 
-      <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-red-800 px-4 py-2 shadow-sm">
-        <UserRound size={18} />
+      <div className="flex items-center gap-2 rounded-xl bg-red-800 p-4 shadow-sm">
+        <UserRound className="text-white" size={18} />
 
-        <span className="text-sm font-medium">
-          Chef Admin
+        <span className="text-sm text-white font-medium">
+          Chef Choice
         </span>
       </div>
     </motion.div>

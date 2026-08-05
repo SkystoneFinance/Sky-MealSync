@@ -64,11 +64,11 @@ export default function TodayAttendance() {
     <div className="space-y-7">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold">
+          <h1 className="text-2xl md:text-4xl font-bold">
             Today's Attendance
           </h1>
 
-          <p className="mt-2 text-gray-500">
+          <p className="mt-2 text-xs md:text-lg text-gray-500">
             Staff that have received meals today.
           </p>
         </div>
@@ -76,7 +76,7 @@ export default function TodayAttendance() {
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="flex items-center gap-2 rounded-xl bg-[#B10F16] px-5 py-3 text-red-800 transition hover:bg-red-800"
+          className="flex items-center gap-2 rounded-xl bg-[#B10F16] px-5 py-3 text-white transition hover:bg-red-800"
         >
           <RefreshCw
             size={18}
@@ -87,8 +87,8 @@ export default function TodayAttendance() {
         </button>
       </div>
 
-      <div className="rounded-3xl border bg-white p-5 shadow-sm">
-        <div className="grid gap-4 lg:grid-cols-3">
+      <div className="rounded-3xl border-grey bg-white p-5 shadow-sm">
+        <div className="grid md:justify-center md:items-center gap-4 lg:grid-cols-3">
           <div className="relative">
             <Search
               size={18}
@@ -119,13 +119,13 @@ export default function TodayAttendance() {
             ))}
           </select>
 
-          <div className="flex items-center justify-center rounded-xl bg-[#B10F16] text-white">
+          <div className="flex items-center justify-center p-4 rounded-xl bg-[#B10F16] text-white">
             <div className="text-center">
-              <p className="text-sm opacity-80">
+              <p className="text-sm text-white opacity-80">
                 Meals Served Today
               </p>
 
-              <h2 className="text-3xl font-bold">
+              <h2 className="text-3xl text-white font-bold">
                 {filteredAttendance.length}
               </h2>
             </div>

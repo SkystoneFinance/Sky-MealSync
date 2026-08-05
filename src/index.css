@@ -109,3 +109,21 @@ a {
   text-decoration: none;
   color: inherit;
 }
+
+.sidebar-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* Firefox */
+  scrollbar-width: none;
+
+  /* Older browsers */
+  -ms-overflow-style: none;
+}
+
+/* Chrome, Edge and Safari */
+.sidebar-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}

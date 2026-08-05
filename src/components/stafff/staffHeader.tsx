@@ -40,31 +40,20 @@ justify-between
 
 <div>
 
-<h1 className="
-text-4xl
-font-bold
-tracking-tight
-">
-
-Staff Management
-
+<h1 className="text-2xl md:text-4xl font-bold tracking-tight">
+    Staff Management
 </h1>
 
 
-<p className="
-text-gray-500
-mt-2
-">
-
-Manage staff members and QR attendance
-
+<p className="text-gray-500 mt-2 text-xs md:text-lg">
+    Manage staff members and QR attendance
 </p>
 
 </div>
 
 
 
-<button onClick = {onAdd} className="flex items-center gap-2 rounded-2xl bg-[#991B1B] text-red px-5 py-3 text-white font-semibold shadow-lg hover:scale-105 transition">
+<button onClick = {onAdd} className="flex items-center gap-2 rounded-2xl bg-[#991B1B] text-red p-4 text-white font-semibold shadow-lg hover:scale-105 transition">
 
 <UserPlus size={20}/>
 
