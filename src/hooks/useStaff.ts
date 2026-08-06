@@ -1,33 +1,35 @@
 import {
- useMutation,
- useQuery,
- useQueryClient
+useQuery,
+useMutation,
+useQueryClient
 } from "@tanstack/react-query";
 
 
-import { staffService } from "../services/staff.service";
+import {
+staffService
+} from "../services/staff.service";
+
 
 import type {
- CreateStaffPayload
+CreateStaffPayload
 } from "../types/staff";
 
 
 
-export function useStaff(){
 
+export function useStaff(){
 
 return useQuery({
 
 queryKey:["staff"],
 
 queryFn:
-staffService.getAll
+staffService.getAll,
 
 });
 
 
 }
-
 
 
 
@@ -39,8 +41,8 @@ const queryClient =
 useQueryClient();
 
 
-
 return useMutation({
+
 
 mutationFn:
 (data:CreateStaffPayload)=>
@@ -55,6 +57,40 @@ queryClient.invalidateQueries({
 queryKey:["staff"]
 
 });
+
+}
+
+
+});
+
+
+}
+
+export function useImportStaff(){
+
+
+const queryClient =
+useQueryClient();
+
+
+
+return useMutation({
+
+
+mutationFn:
+(file:File)=>
+staffService.importStaff(file),
+
+
+
+onSuccess(){
+
+queryClient.invalidateQueries({
+
+queryKey:["staff"]
+
+});
+
 
 }
 

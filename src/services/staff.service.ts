@@ -1,9 +1,11 @@
 import axios from "../lib/axios";
 
+
 import type {
  Staff,
  CreateStaffPayload
 } from "../types/staff";
+
 
 
 interface ApiResponse<T>{
@@ -16,7 +18,11 @@ interface ApiResponse<T>{
 
 }
 
-export const staffService={
+
+
+export const staffService = {
+
+
 
 async getAll(){
 
@@ -31,24 +37,82 @@ async getAll(){
 },
 
 
-async create(data:CreateStaffPayload){
+
+
+async create(
+ data:CreateStaffPayload
+){
+
  const response =
  await axios.post<ApiResponse<Staff>>(
    "/staff",
    data
  );
+
+
  return response.data.data;
 
 },
 
 
 
-async delete(id:string){
+
+
+async importStaff(
+ file:File
+){
+
+const formData =
+new FormData();
+
+
+formData.append(
+ "file",
+ file
+);
+
+
+
+const response =
+await axios.post(
+
+"/staff/import",
+
+formData,
+
+{
+headers:{
+"Content-Type":
+"multipart/form-data"
+}
+}
+
+);
+
+
+
+return response.data;
+
+
+},
+
+
+
+
+
+async delete(
+id:string
+){
+
  const response =
  await axios.delete<ApiResponse<null>>(
    `/staff/${id}`
  );
- return response.data;
-},
-};
 
+
+ return response.data;
+
+},
+
+
+};

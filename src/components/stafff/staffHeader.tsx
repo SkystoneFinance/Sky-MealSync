@@ -1,21 +1,47 @@
-import { UserPlus } from "lucide-react";
-import { motion } from "framer-motion";
+import {
+UserPlus,
+ChevronDown,
+Upload,
+Plus
+} from "lucide-react";
+
+
+import {
+motion
+} from "framer-motion";
+
+
+import {
+useState
+} from "react";
 
 
 
 interface Props{
 
-onAdd:()=>void;
+onCreate:()=>void;
+
+onImport:()=>void;
 
 }
 
 
+
 export default function StaffHeader({
-onAdd
+
+onCreate,
+
+onImport
+
 }:Props){
 
 
+const [open,setOpen]=useState(false);
+
+
+
 return (
+
 
 <motion.div
 
@@ -30,7 +56,7 @@ y:0
 }}
 
 className="
-flex py-5
+flex
 items-center
 justify-between
 "
@@ -40,31 +66,166 @@ justify-between
 
 <div>
 
-<h1 className="text-2xl md:text-4xl font-bold tracking-tight">
-    Staff Management
+
+<h1 className="
+text-4xl
+font-bold
+">
+
+Staff Management
+
 </h1>
 
 
-<p className="text-gray-500 mt-2 text-xs md:text-lg">
-    Manage staff members and QR attendance
+<p className="
+text-gray-500
+mt-2
+">
+
+Manage staff members and QR attendance
+
 </p>
+
 
 </div>
 
 
 
-<button onClick = {onAdd} className="flex items-center gap-2 rounded-2xl bg-[#991B1B] text-red p-4 text-white font-semibold shadow-lg hover:scale-105 transition">
+
+
+<div className="relative">
+
+
+<button
+
+onClick={()=>setOpen(!open)}
+
+className="
+flex
+items-center
+gap-2
+rounded-2xl
+bg-[#B10F16]
+px-5
+py-3
+text-white
+font-semibold
+shadow-lg
+hover:scale-105
+transition
+"
+
+>
+
 
 <UserPlus size={20}/>
 
 Add Staff
 
+
+<ChevronDown size={18}/>
+
+
 </button>
 
 
+
+
+
+{
+open &&
+
+<div
+
+className="
+absolute
+right-0
+mt-3
+w-52
+rounded-2xl
+bg-white
+shadow-xl
+border
+p-2
+z-50
+"
+
+>
+
+
+
+<button
+
+onClick={()=>{
+
+setOpen(false);
+
+onCreate();
+
+}}
+
+className="
+flex
+w-full
+items-center
+gap-3
+rounded-xl
+px-4
+py-3
+hover:bg-gray-100
+"
+
+>
+
+<Plus size={18}/>
+
+Create Staff
+
+</button>
+
+
+
+
+
+<button
+
+onClick={()=>{
+
+setOpen(false);
+
+onImport();
+
+}}
+
+className="
+flex
+w-full
+items-center
+gap-3
+rounded-xl
+px-4
+py-3
+hover:bg-gray-100
+"
+
+>
+
+<Upload size={18}/>
+
+Import Excel
+
+</button>
+
+
+
+</div>
+
+}
+
+
+
+</div>
 </motion.div>
-
-
 )
 
 }
