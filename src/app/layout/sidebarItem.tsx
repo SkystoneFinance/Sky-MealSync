@@ -44,10 +44,8 @@ export default function SidebarItem({
             />
           )}
 
-          {/* Gloss */}
           <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-white/70 via-transparent to-transparent" />
 
-          {/* Soft reflection */}
           <div className="absolute -top-10 left-0 h-20 w-full bg-white/20 blur-2xl" />
 
           <div className="relative flex items-center gap-3 sm:gap-4">
@@ -69,7 +67,9 @@ export default function SidebarItem({
 
             <span
               className={`text-sm font-semibold transition-colors sm:text-base ${
-                isActive ? "text-slate-900" : "text-slate-600"
+                isActive
+                  ? "text-slate-900"
+                  : "text-slate-600"
               }`}
             >
               {title}
