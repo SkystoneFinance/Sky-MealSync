@@ -7,11 +7,14 @@ import AppRoutes from "./app/routes/AppRoutes";
 import QueryProvider from "./app/providers/QueryProvider";
 
 import "./index.css";
+import AuthProvider from "./components/auth/AuthProvider";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
     <QueryProvider>
+      <AuthProvider>
       <AppRoutes />
+      </AuthProvider>
     </QueryProvider>
   </BrowserRouter>
 );

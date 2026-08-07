@@ -34,6 +34,7 @@ export default function StaffTable({ staff }: Props) {
                 </td>
               </tr>
             ) : (
+              
               staff.map((person) => (
                 <tr
                   key={person.id}
