@@ -5,14 +5,14 @@ import {
 } from "react";
 
 import { authService } from "../../services/auth.service";
+
 import type {
   LoginPayload,
   User,
 } from "../../types/auth";
 
-interface ContextType {
+interface AuthContextType {
   user: User | null;
-
   loading: boolean;
 
   login: (
@@ -23,14 +23,12 @@ interface ContextType {
 }
 
 export const AuthContext =
-  createContext<ContextType>(
-    {} as ContextType
+  createContext<AuthContextType | undefined>(
+    undefined
   );
 
 export default function AuthProvider({
-
   children,
-
 }: {
   children: React.ReactNode;
 }) {
@@ -51,13 +49,21 @@ export default function AuthProvider({
 
     authService
       .me()
-      .then(setUser)
-      .finally(() => setLoading(false));
+      .then((currentUser) => {
+        setUser(currentUser);
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        setUser(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   async function login(
     data: LoginPayload
-  ) {
+  ): Promise<void> {
     const result =
       await authService.login(data);
 

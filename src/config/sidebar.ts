@@ -1,74 +1,127 @@
 import {
-  History,
   LayoutDashboard,
-  QrCode,
+  UtensilsCrossed,
+  History,
   Scan,
   Users,
-  UtensilsCrossed,
+  User,
 } from "lucide-react";
 
-export const sidebarByRole = {
+import type { LucideIcon } from "lucide-react";
+
+import type {
+  Role,
+} from "../types/auth";
+
+
+export interface SidebarItemConfig {
+  title: string;
+  path: string;
+  icon: LucideIcon;
+}
+
+
+export const sidebarByRole: Record<
+  Role,
+  SidebarItemConfig[]
+> = {
+
+  // ==================================
+  // SUPER ADMIN
+  // ==================================
+
   SUPER_ADMIN: [
+
     {
       title: "Dashboard",
       path: "/",
       icon: LayoutDashboard,
     },
+
     {
       title: "Check Who Have Eaten",
       path: "/check-meal",
       icon: UtensilsCrossed,
     },
+
     {
       title: "History",
       path: "/history",
       icon: History,
     },
+
     {
       title: "Scan QR Code",
       path: "/scan",
       icon: Scan,
     },
+
     {
       title: "Staff Management",
       path: "/staff",
       icon: Users,
     },
+
   ],
 
+
+  // ==================================
+  // ADMIN
+  // ==================================
+
   ADMIN: [
+
     {
       title: "Dashboard",
       path: "/",
       icon: LayoutDashboard,
     },
-    {
-      title: "Scan QR Code",
-      path: "/scan",
-      icon: Scan,
-    },
+
     {
       title: "Check Who Have Eaten",
       path: "/check-meal",
       icon: UtensilsCrossed,
     },
+
+    {
+      title: "Scan QR Code",
+      path: "/scan",
+      icon: Scan,
+    },
+
+    {
+      title: "My Staff Details",
+      path: "/my-staff",
+      icon: User,
+    },
+
   ],
 
+
+  // ==================================
+  // NORMAL USER
+  // ==================================
+
   USER: [
+
     {
       title: "Dashboard",
       path: "/",
       icon: LayoutDashboard,
     },
-    {
-      title: "My QR Code",
-      path: "/my-qr",
-      icon: QrCode,
-    },
+
     {
       title: "My Attendance",
       path: "/my-attendance",
-      icon: History,
+      icon: UtensilsCrossed,
     },
+
+    {
+      title: "My Staff Details",
+      path: "/my-staff",
+      icon: User,
+    },
+
   ],
+
 };

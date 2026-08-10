@@ -1,63 +1,32 @@
 import {
-Navigate,
-Outlet
+  Navigate,
+  Outlet,
 } from "react-router-dom";
 
-import {
-useAuth
-} from "../../hooks/useAuth";
+import { useAuth } from "../../hooks/useAuth";
 
+export default function ProtectedRoute() {
+  const {
+    user,
+    loading,
+  } = useAuth();
 
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center font-semibold">
+        Loading MealSync...
+      </div>
+    );
+  }
 
-export default function ProtectedRoute(){
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
 
-const {
-user,
-loading
-}=useAuth();
-
-
-
-if(loading){
-
-return (
-
-<div className="
-h-screen
-flex
-items-center
-justify-center
-font-semibold
-">
-
-Loading MealSync...
-
-</div>
-
-);
-
-}
-
-
-
-
-
-if(!user){
-
-return (
-
-<Navigate
-to="/login"
-replace
-/>
-
-);
-
-}
-
-
-
-return <Outlet/>;
-
-
+  return <Outlet />;
 }
