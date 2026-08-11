@@ -108,7 +108,7 @@ export default function ScannerCard() {
           />
 
           <h2 className="mt-4 text-2xl font-bold">
-            Attendance Recorded
+            Meal Attendance Recorded
           </h2>
 
           <img
