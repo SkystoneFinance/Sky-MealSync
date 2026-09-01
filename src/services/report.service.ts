@@ -5,11 +5,18 @@ import type {
   StaffMealSummary,
 } from "../types/report";
 
+export type ExportPeriod =
+  | "today"
+  | "current-week"
+  | "previous-week"
+  | "current-month"
+  | "previous-month";
+
 export const reportService = {
   async today() {
     const response =
       await axios.get<ReportSummary>(
-        "/reports/today"
+        "/reports/today",
       );
 
     return response.data;
@@ -18,7 +25,7 @@ export const reportService = {
   async weekly() {
     const response =
       await axios.get<ReportSummary>(
-        "/reports/weekly"
+        "/reports/weekly",
       );
 
     return response.data;
@@ -27,7 +34,7 @@ export const reportService = {
   async monthly() {
     const response =
       await axios.get<ReportSummary>(
-        "/reports/monthly"
+        "/reports/monthly",
       );
 
     return response.data;
@@ -41,21 +48,21 @@ export const reportService = {
         success: boolean;
         data: StaffMealSummary[];
       }>(
-        `/reports/staff-summary?period=${period}`
+        `/reports/staff-summary?period=${period}`,
       );
 
     return response.data.data;
   },
 
   async downloadReport(
-    period: string,
+    period: ExportPeriod,
   ) {
     const response =
       await axios.get(
         `/reports/export?period=${period}`,
         {
           responseType: "blob",
-        }
+        },
       );
 
     return response.data;
