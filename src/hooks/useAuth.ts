@@ -5,8 +5,7 @@ import {
 } from "../components/auth/AuthProvider";
 
 export function useAuth() {
-  const context =
-    useContext(AuthContext);
+  const context = useContext(AuthContext);
 
   if (!context) {
     throw new Error(

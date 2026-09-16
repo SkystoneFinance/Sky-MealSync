@@ -1,96 +1,80 @@
-import {
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import AdminLayout from "../layout/dashboardLayout";
-
 import ProtectedRoute from "../../components/auth/protectedRoutes";
 import RoleRoute from "../../components/auth/roleRoutes";
 
 import Login from "../../components/auth/login";
-
 import Dashboard from "../../components/dashboard/dashboard";
+import StaffDashboard from "../../components/stafff/staffDashboard";
+
 import CheckMeal from "../../components/attendance/TodayAttendance";
 import History from "../../components/history/History";
 import Staffs from "../../components/stafff/staff";
 import Scan from "../../components/scan/scan";
 
+import MyProfile from "../../components/stafff/MyProfile";
+import WeeklyMealPlan from "../../components/mealplan/weeklyplan";
+
+
+import { useAuth } from "../../hooks/useAuth";
+
+function DashboardEntry() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return null;
+  }
+
+  if (user.role === "USER") {
+    return <StaffDashboard />;
+  }
+
+  return <Dashboard />;
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
+      <Route path="/login" element={<Login />} />
 
-      {/* PUBLIC */}
-      <Route
-        path="/login"
-        element={<Login />}
-      />
-
-      {/* PROTECTED */}
       <Route element={<ProtectedRoute />}>
-
         <Route element={<AdminLayout />}>
 
-          {/* Everyone logged in */}
-          <Route
-            index
-            element={<Dashboard />}
-          />
+          {/* DASHBOARD */}
+          <Route index element={<DashboardEntry />} />
 
-          <Route
-            path="check-meal"
-            element={<CheckMeal />}
-          />
+          {/* ADMIN / SUPER ADMIN */}
+          <Route path="check-meal" element={<CheckMeal />} />
+          <Route path="history" element={<History />} />
 
-          <Route
-            path="history"
-            element={<History />}
-          />
-
-          {/* ADMIN + SUPER_ADMIN */}
           <Route
             element={
-              <RoleRoute
-                allowedRoles={[
-                  "ADMIN",
-                  "SUPER_ADMIN",
-                ]}
-              />
+              <RoleRoute allowedRoles={["ADMIN", "SUPER_ADMIN"]} />
             }
           >
-            <Route
-              path="scan"
-              element={<Scan />}
-            />
+            <Route path="scan" element={<Scan />} />
           </Route>
 
-          {/* SUPER_ADMIN ONLY */}
+          {/* SUPER ADMIN */}
           <Route
-            element={
-              <RoleRoute
-                allowedRoles={[
-                  "SUPER_ADMIN",
-                ]}
-              />
-            }
+            element={<RoleRoute allowedRoles={["SUPER_ADMIN"]} />}
           >
-            <Route
-              path="staff"
-              element={<Staffs />}
-            />
+            <Route path="staff" element={<Staffs />} />
+          </Route>
+
+          {/* NORMAL STAFF */}
+          <Route
+            element={<RoleRoute allowedRoles={["USER"]} />}
+          >
+            <Route path="meal-plan" element={<WeeklyMealPlan />} />
+            <Route path="my-profile" element={<MyProfile />} />
           </Route>
 
         </Route>
-
       </Route>
 
-      {/* FALLBACK */}
-      <Route
-        path="*"
-        element={<Navigate to="/" replace />}
-      />
-
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

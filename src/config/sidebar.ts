@@ -9,10 +9,7 @@ import {
 
 import type { LucideIcon } from "lucide-react";
 
-import type {
-  Role,
-} from "../types/auth";
-
+import type { Role } from "../types/auth";
 
 export interface SidebarItemConfig {
   title: string;
@@ -20,18 +17,12 @@ export interface SidebarItemConfig {
   icon: LucideIcon;
 }
 
-
-export const sidebarByRole: Record<
-  Role,
-  SidebarItemConfig[]
-> = {
-
+export const sidebarByRole: Record<Role, SidebarItemConfig[]> = {
   // ==================================
   // SUPER ADMIN
   // ==================================
 
   SUPER_ADMIN: [
-
     {
       title: "Dashboard",
       path: "/",
@@ -61,16 +52,13 @@ export const sidebarByRole: Record<
       path: "/staff",
       icon: Users,
     },
-
   ],
-
 
   // ==================================
   // ADMIN
   // ==================================
 
   ADMIN: [
-
     {
       title: "Dashboard",
       path: "/",
@@ -94,16 +82,13 @@ export const sidebarByRole: Record<
       path: "/my-staff",
       icon: User,
     },
-
   ],
 
-
   // ==================================
-  // NORMAL USER
+  // NORMAL USER / STAFF
   // ==================================
 
   USER: [
-
     {
       title: "Dashboard",
       path: "/",
@@ -111,17 +96,15 @@ export const sidebarByRole: Record<
     },
 
     {
-      title: "My Attendance",
-      path: "/my-attendance",
+      title: "Select Meal",
+      path: "/meal-plan",
       icon: UtensilsCrossed,
     },
 
     {
-      title: "My Staff Details",
-      path: "/my-staff",
+      title: "My Profile",
+      path: "/my-profile",
       icon: User,
     },
-
   ],
-
 };
