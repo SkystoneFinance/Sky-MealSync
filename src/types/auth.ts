@@ -37,16 +37,19 @@ export interface AdminUser {
 
 export interface StaffUser {
   id: string;
-
   staffId: string;
 
   staffNumber: string;
-
   firstName: string;
-
   lastName: string;
-
   department: string;
+
+  phoneNumber: string | null;
+
+  qrCodeId: string;
+  qrImage: string;
+
+  isActive: boolean;
 
   role: "USER";
 }
