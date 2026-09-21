@@ -78,8 +78,8 @@ export const sidebarByRole: Record<Role, SidebarItemConfig[]> = {
     },
 
     {
-      title: "My Staff Details",
-      path: "/my-staff",
+      title: "Food Management",
+      path: "/food-management",
       icon: User,
     },
   ],

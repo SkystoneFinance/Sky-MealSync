@@ -15,6 +15,7 @@ import Scan from "../../components/scan/scan";
 
 import MyProfile from "../../components/stafff/MyProfile";
 import WeeklyMealPlan from "../../components/mealplan/weeklyplan";
+import FoodManagement from "../../components/foodManagement/FoodManagement";
 
 
 import { useAuth } from "../../hooks/useAuth";
@@ -65,12 +66,18 @@ export default function AppRoutes() {
 
           {/* NORMAL STAFF */}
           <Route
+            element={<RoleRoute allowedRoles={["ADMIN"]} />}
+          >
+            <Route path="food-management" element={<FoodManagement />} />
+          </Route>
+
+          {/* NORMAL STAFF */}
+          <Route
             element={<RoleRoute allowedRoles={["USER"]} />}
           >
             <Route path="meal-plan" element={<WeeklyMealPlan />} />
             <Route path="my-profile" element={<MyProfile />} />
           </Route>
-
         </Route>
       </Route>
 
