@@ -8,8 +8,14 @@ import {
   foodOptionService,
   type CreateFoodOptionPayload,
   type UpdateFoodOptionPayload,
-  // type UpdateFoodOptionStatusPayload,
 } from "../services/foodOption.service";
+
+
+// ==========================================
+// QUERY KEYS
+// ==========================================
+
+const FOOD_OPTIONS_KEY = ["food-options"] as const;
 
 
 // ==========================================
@@ -17,18 +23,10 @@ import {
 // ==========================================
 
 export function useFoodOptions() {
-
   return useQuery({
-
-    queryKey: [
-      "food-options",
-    ],
-
-    queryFn:
-      foodOptionService.getAll,
-
+    queryKey: FOOD_OPTIONS_KEY,
+    queryFn: foodOptionService.getAll,
   });
-
 }
 
 
@@ -36,26 +34,25 @@ export function useFoodOptions() {
 // GET FOOD OPTIONS BY DATE
 // ==========================================
 
-export function useFoodOptionsByDate(
-  date: string
-) {
-
+export function useFoodOptionsByDate(date: string) {
   return useQuery({
-
-    queryKey: [
-      "food-options",
-      "date",
-      date,
-    ],
-
-    queryFn: () =>
-      foodOptionService.getByDate(date),
-
-    enabled:
-      Boolean(date),
-
+    queryKey: ["food-options", "date", date],
+    queryFn: () => foodOptionService.getByDate(date),
+    enabled: Boolean(date),
   });
+}
 
+
+// ==========================================
+// GET FOOD DEMAND SUMMARY
+// ==========================================
+
+export function useFoodOptionSummary(date: string) {
+  return useQuery({
+    queryKey: ["food-options", "summary", date],
+    queryFn: () => foodOptionService.getSummaryByDate(date),
+    enabled: Boolean(date),
+  });
 }
 
 
@@ -64,36 +61,18 @@ export function useFoodOptionsByDate(
 // ==========================================
 
 export function useCreateFoodOption() {
-
-  const queryClient =
-    useQueryClient();
-
+  const queryClient = useQueryClient();
 
   return useMutation({
+    mutationFn: (data: CreateFoodOptionPayload) =>
+      foodOptionService.create(data),
 
-    mutationFn:
-      (
-        data: CreateFoodOptionPayload
-      ) =>
-        foodOptionService.create(
-          data
-        ),
-
-
-    onSuccess: () => {
-
-      queryClient.invalidateQueries({
-
-        queryKey: [
-          "food-options",
-        ],
-
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: FOOD_OPTIONS_KEY,
       });
-
     },
-
   });
-
 }
 
 
@@ -102,41 +81,23 @@ export function useCreateFoodOption() {
 // ==========================================
 
 export function useUpdateFoodOption() {
-
-  const queryClient =
-    useQueryClient();
-
+  const queryClient = useQueryClient();
 
   return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateFoodOptionPayload;
+    }) => foodOptionService.update(id, data),
 
-    mutationFn:
-      ({
-        id,
-        data,
-      }: {
-        id: string;
-        data: UpdateFoodOptionPayload;
-      }) =>
-        foodOptionService.update(
-          id,
-          data
-        ),
-
-
-    onSuccess: () => {
-
-      queryClient.invalidateQueries({
-
-        queryKey: [
-          "food-options",
-        ],
-
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: FOOD_OPTIONS_KEY,
       });
-
     },
-
   });
-
 }
 
 
@@ -145,43 +106,26 @@ export function useUpdateFoodOption() {
 // ==========================================
 
 export function useUpdateFoodOptionStatus() {
-
-  const queryClient =
-    useQueryClient();
-
+  const queryClient = useQueryClient();
 
   return useMutation({
-
-    mutationFn:
-      ({
-        id,
+    mutationFn: ({
+      id,
+      isActive,
+    }: {
+      id: string;
+      isActive: boolean;
+    }) =>
+      foodOptionService.updateStatus(id, {
         isActive,
-      }: {
-        id: string;
-        isActive: boolean;
-      }) =>
-        foodOptionService.updateStatus(
-          id,
-          {
-            isActive,
-          }
-        ),
+      }),
 
-
-    onSuccess: () => {
-
-      queryClient.invalidateQueries({
-
-        queryKey: [
-          "food-options",
-        ],
-
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: FOOD_OPTIONS_KEY,
       });
-
     },
-
   });
-
 }
 
 
@@ -190,30 +134,16 @@ export function useUpdateFoodOptionStatus() {
 // ==========================================
 
 export function useDeleteFoodOption() {
-
-  const queryClient =
-    useQueryClient();
-
+  const queryClient = useQueryClient();
 
   return useMutation({
+    mutationFn: (id: string) =>
+      foodOptionService.remove(id),
 
-    mutationFn:
-      (id: string) =>
-        foodOptionService.remove(id),
-
-
-    onSuccess: () => {
-
-      queryClient.invalidateQueries({
-
-        queryKey: [
-          "food-options",
-        ],
-
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: FOOD_OPTIONS_KEY,
       });
-
     },
-
   });
-
 }

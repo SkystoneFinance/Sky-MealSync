@@ -17,3 +17,21 @@ export interface FoodOptionResponse {
   success: boolean;
   data: FoodOption;
 }
+
+export interface FoodOptionSummary {
+  id: string;
+  name: string;
+  image: string;
+  mealDate: string;
+  isActive: boolean;
+  selectionCount: number;
+}
+
+export interface FoodOptionSummaryResponse {
+  success: boolean;
+  data: {
+    date: string;
+    totalSelections: number;
+    options: FoodOptionSummary[];
+  };
+}

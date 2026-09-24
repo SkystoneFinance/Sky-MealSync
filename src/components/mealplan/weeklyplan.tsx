@@ -17,6 +17,7 @@ import {
 import {
   useCreateMealSelection,
   useMyMealSelections,
+  useUpdateMealSelection,
 } from "../../hooks/useMealSelection";
 
 type DayKey =
@@ -132,7 +133,10 @@ export default function WeeklyMealPlan() {
   } = useMyMealSelections();
 
   const createSelection =
-    useCreateMealSelection();
+  useCreateMealSelection();
+
+const updateSelection =
+  useUpdateMealSelection();
 
   const handleSelect = (
     date: string,
@@ -169,52 +173,68 @@ export default function WeeklyMealPlan() {
   };
 
   const handleSubmit = async () => {
-    const missingDay =
-      days.find(
-        (day) =>
-          !getSelectedFood(day.date)
-      );
+  const missingDay = days.find(
+    (day) =>
+      !getSelectedFood(day.date)
+  );
 
-    if (missingDay) {
-      alert(
-        `Please select a meal for ${missingDay.name}.`
-      );
+  if (missingDay) {
+    alert(
+      `Please select a meal for ${missingDay.name}.`
+    );
 
-      return;
-    }
+    return;
+  }
 
-    try {
-      for (const day of days) {
-        const foodOptionId =
-          getSelectedFood(day.date);
+  try {
+    for (const day of days) {
+      const foodOptionId =
+        getSelectedFood(day.date);
 
-        const existing =
-          getExistingSelection(
-            day.date
-          );
+      const existing =
+        getExistingSelection(day.date);
 
-        if (!existing) {
-          await createSelection.mutateAsync(
-            {
-              foodOptionId,
-              mealDate: day.date,
-            }
-          );
-        }
+      // ==========================
+      // NEW SELECTION
+      // ==========================
+
+      if (!existing) {
+        await createSelection.mutateAsync({
+          foodOptionId,
+          mealDate: day.date,
+        });
+
+        continue;
       }
 
-      setSubmitted(true);
-    } catch (error) {
-      console.error(
-        "Failed to submit meal plan:",
-        error
-      );
+      // ==========================
+      // CHANGE FUTURE SELECTION
+      // ==========================
 
-      alert(
-        "Something went wrong while saving your meal plan."
-      );
+      if (
+        existing.foodOptionId !==
+        foodOptionId
+      ) {
+        await updateSelection.mutateAsync({
+          id: existing.id,
+          foodOptionId,
+        });
+      }
     }
-  };
+
+    setSubmitted(true);
+
+  } catch (error) {
+    console.error(
+      "Failed to submit meal plan:",
+      error
+    );
+
+    alert(
+      "Something went wrong while saving your meal plan."
+    );
+  }
+};
 
   const hasAllSelections =
     days.every(
@@ -223,6 +243,7 @@ export default function WeeklyMealPlan() {
           getSelectedFood(day.date)
         )
     );
+    
 
   if (selectionsLoading) {
     return (
@@ -234,6 +255,30 @@ export default function WeeklyMealPlan() {
       </div>
     );
   }
+
+  function isDateLocked(dateString: string) {
+  const today = new Date();
+
+  today.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+  const selectedDate = new Date(
+    `${dateString}T00:00:00`
+  );
+
+  selectedDate.setHours(
+    0,
+    0,
+    0,
+    0
+  );
+
+  return selectedDate <= today;
+}
 
   return (
     <div className="space-y-6">
@@ -295,18 +340,17 @@ export default function WeeklyMealPlan() {
       <div className="space-y-6">
         {days.map((day) => (
           <DayMealSelector
-            key={day.date}
-            day={day}
-            selectedFoodId={getSelectedFood(
-              day.date
-            )}
-            onSelect={(foodId) =>
-              handleSelect(
-                day.date,
-                foodId
-              )
-            }
-          />
+  key={day.date}
+  day={day}
+  selectedFoodId={getSelectedFood(day.date)}
+  onSelect={(foodId) =>
+    handleSelect(
+      day.date,
+      foodId
+    )
+  }
+  locked={isDateLocked(day.date)}
+/>
         ))}
       </div>
 
@@ -351,12 +395,14 @@ function DayMealSelector({
   day,
   selectedFoodId,
   onSelect,
+  locked,
 }: {
   day: Day;
   selectedFoodId: string;
   onSelect: (
     foodOptionId: string
   ) => void;
+  locked: boolean;
 }) {
   const {
     data: foodOptions = [],
@@ -391,13 +437,16 @@ function DayMealSelector({
           </p>
         </div>
 
-        {selectedFoodId && (
-          <div className="flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
-            <Check size={14} />
-
-            Selected
-          </div>
-        )}
+        {locked ? (
+  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+    🔒 Locked
+  </div>
+) : selectedFoodId ? (
+  <div className="flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+    <Check size={14} />
+    Selected
+  </div>
+) : null}
       </div>
 
       {/* FOOD OPTIONS */}
@@ -429,18 +478,21 @@ function DayMealSelector({
 
               return (
                 <button
-                  key={food.id}
-                  type="button"
-                  onClick={() =>
-                    onSelect(
-                      food.id
-                    )
+                key={food.id}
+                type="button"
+                disabled={locked}
+                onClick={() => {
+                  if (!locked) {
+                    onSelect(food.id);
                   }
+                }}
                   className={`group overflow-hidden rounded-xl border-2 text-left transition ${
-                    selected
-                      ? "border-[#B10F16] bg-red-50"
+                  selected
+                    ? "border-[#B10F16] bg-red-50"
+                    : locked
+                      ? "cursor-not-allowed border-gray-100 bg-gray-50 opacity-70"
                       : "border-gray-100 bg-white hover:border-gray-300"
-                  }`}
+                }`}
                 >
                   <div className="relative h-40 overflow-hidden">
                     <img
@@ -467,12 +519,18 @@ function DayMealSelector({
                       className={`mt-1 text-xs font-medium ${
                         selected
                           ? "text-[#B10F16]"
-                          : "text-gray-500"
+                          : locked
+                            ? "text-slate-400"
+                            : "text-gray-500"
                       }`}
                     >
-                      {selected
-                        ? "Selected"
-                        : "Select this meal"}
+                      {locked
+                        ? selected
+                          ? "Selected for this day"
+                          : "Selection closed"
+                        : selected
+                          ? "Selected"
+                          : "Select this meal"}
                     </p>
                   </div>
                 </button>

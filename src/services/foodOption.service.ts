@@ -4,6 +4,7 @@ import type {
   FoodOption,
   FoodOptionsResponse,
   FoodOptionResponse,
+  FoodOptionSummaryResponse,
 } from "../types/foodOption";
 
 
@@ -41,7 +42,6 @@ export const foodOptionService = {
   // ========================================
 
   async getAll(): Promise<FoodOption[]> {
-
     const response =
       await api.get<FoodOptionsResponse>(
         "/food-options"
@@ -58,7 +58,6 @@ export const foodOptionService = {
   async getByDate(
     date: string
   ): Promise<FoodOption[]> {
-
     const response =
       await api.get<FoodOptionsResponse>(
         `/food-options/date?date=${encodeURIComponent(date)}`
@@ -75,7 +74,6 @@ export const foodOptionService = {
   async getById(
     id: string
   ): Promise<FoodOption> {
-
     const response =
       await api.get<FoodOptionResponse>(
         `/food-options/${id}`
@@ -92,7 +90,6 @@ export const foodOptionService = {
   async create(
     data: CreateFoodOptionPayload
   ): Promise<FoodOption> {
-
     const response =
       await api.post<FoodOptionResponse>(
         "/food-options",
@@ -111,7 +108,6 @@ export const foodOptionService = {
     id: string,
     data: UpdateFoodOptionPayload
   ): Promise<FoodOption> {
-
     const response =
       await api.patch<FoodOptionResponse>(
         `/food-options/${id}`,
@@ -130,7 +126,6 @@ export const foodOptionService = {
     id: string,
     data: UpdateFoodOptionStatusPayload
   ): Promise<FoodOption> {
-
     const response =
       await api.patch<FoodOptionResponse>(
         `/food-options/${id}/status`,
@@ -148,11 +143,25 @@ export const foodOptionService = {
   async remove(
     id: string
   ): Promise<void> {
-
     await api.delete(
       `/food-options/${id}`
     );
+  },
 
+
+  // ========================================
+  // GET DEMAND SUMMARY BY DATE
+  // ========================================
+
+  async getSummaryByDate(
+    date: string
+  ): Promise<FoodOptionSummaryResponse["data"]> {
+    const response =
+      await api.get<FoodOptionSummaryResponse>(
+        `/food-options/summary?date=${encodeURIComponent(date)}`
+      );
+
+    return response.data.data;
   },
 
 };
