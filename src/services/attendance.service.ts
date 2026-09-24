@@ -8,28 +8,71 @@ interface ApiResponse<T> {
 }
 
 export const attendanceService = {
-  async scan(data: { qrCodeId: string }) {
-    const response = await axios.post<ApiResponse<any>>(
-      "/attendance/scan",
-      data
-    );
+
+  // =========================================
+  // SCAN QR
+  // =========================================
+
+  async scan(
+    data: { qrCodeId: string },
+  ) {
+    const response =
+      await axios.post<
+        ApiResponse<any>
+      >(
+        "/attendance/scan",
+        data,
+      );
 
     return response.data;
   },
 
+
+  // =========================================
+  // SERVE MEAL
+  // =========================================
+
+  async serveMeal(
+    data: { staffId: string },
+  ) {
+    const response =
+      await axios.post<
+        ApiResponse<any>
+      >(
+        "/attendance/serve",
+        data,
+      );
+
+    return response.data;
+  },
+
+
+  // =========================================
+  // TODAY
+  // =========================================
+
   async getToday() {
     const response =
-      await axios.get<ApiResponse<Attendance[]>>(
-        "/attendance/today"
+      await axios.get<
+        ApiResponse<Attendance[]>
+      >(
+        "/attendance/today",
       );
 
     return response.data.data;
   },
 
+
+  // =========================================
+  // HISTORY
+  // =========================================
+
   async getHistory() {
     const response =
-      await axios.get<ApiResponse<Attendance[]>>(
-        "/attendance/history"
+      await axios.get<
+        ApiResponse<Attendance[]>
+      >(
+        "/attendance/history",
       );
 
     return response.data.data;
