@@ -1,282 +1,175 @@
-import {
-  useState,
-} from "react";
+import { useState } from "react";
+import { Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
-import {
-  useNavigate,
-} from "react-router-dom";
-
-import {
-  Eye,
-  EyeOff,
-  Loader2,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
-
-import {
-  useAuth,
-} from "../../hooks/useAuth";
-
-import {
-  authService,
-} from "../../services/auth.service";
-
-
-type LoginMode =
-  | "staff"
-  | "admin";
-
-
-type StaffStep =
-  | "details"
-  | "otp";
-
+import { authService } from "../../services/auth.service";
+import { useAuth } from "../../hooks/useAuth";
 
 export default function Login() {
+  const navigate = useNavigate();
+
+  const { login, staffLogin } = useAuth();
+
+  const [loginType, setLoginType] = useState<
+    "admin" | "staff"
+  >("staff");
+
+  const [staffStep, setStaffStep] = useState<
+    "activate" | "otp"
+  >("activate");
+
+  const [staffNumber, setStaffNumber] =
+    useState("");
+
+  const [phoneNumber, setPhoneNumber] =
+    useState("");
+
+  const [otp, setOtp] =
+    useState("");
+
+  const [email, setEmail] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const [showPassword, setShowPassword] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(false);
 
 
-  const navigate =
-    useNavigate();
-
-
-  const {
-    login,
-    staffLogin,
-  } = useAuth();
-
-
-  // ===================================
-  // LOGIN MODE
-  // ===================================
-
-  const [
-    mode,
-    setMode,
-  ] = useState<LoginMode>(
-    "staff"
-  );
-
-
-  // ===================================
-  // STAFF STEP
-  // ===================================
-
-  const [
-    staffStep,
-    setStaffStep,
-  ] = useState<StaffStep>(
-    "details"
-  );
-
-
-  // ===================================
-  // ADMIN STATE
-  // ===================================
-
-  const [
-    email,
-    setEmail,
-  ] = useState("");
-
-
-  const [
-    password,
-    setPassword,
-  ] = useState("");
-
-
-  const [
-    showPassword,
-    setShowPassword,
-  ] = useState(false);
-
-
-  // ===================================
-  // STAFF STATE
-  // ===================================
-
-  const [
-    staffNumber,
-    setStaffNumber,
-  ] = useState("");
-
-
-  const [
-    phoneNumber,
-    setPhoneNumber,
-  ] = useState("");
-
-
-  const [
-    code,
-    setCode,
-  ] = useState("");
-
-
-  // ===================================
-  // GENERAL STATE
-  // ===================================
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
-
-
-  const [
-    error,
-    setError,
-  ] = useState("");
-
-
-  const [
-    message,
-    setMessage,
-  ] = useState("");
-
-
-  // ===================================
-  // CHANGE MODE
-  // ===================================
-
-  function changeMode(
-    newMode: LoginMode
-  ) {
-
-    setMode(newMode);
-
-    setError("");
-
-    setMessage("");
-
-    setStaffStep("details");
-
-  }
-
-
-  // ===================================
+  // ==========================================
   // ADMIN LOGIN
-  // ===================================
+  // ==========================================
 
   async function handleAdminLogin(
-    e: React.FormEvent
+    event: React.FormEvent
   ) {
+    event.preventDefault();
 
-    e.preventDefault();
-
-    setError("");
-
-    setLoading(true);
-
-
-    try {
-
-      await login({
-
-        email,
-
-        password,
-
-      });
-
-
-      navigate("/");
-
-    } catch {
-
-      setError(
-        "Invalid email or password"
+    if (!email.trim() || !password) {
+      toast.error(
+        "Please enter your email and password."
       );
 
-    } finally {
-
-      setLoading(false);
-
+      return;
     }
 
-  }
-
-
-  // ===================================
-  // STAFF REQUEST OTP
-  // ===================================
-
-  async function handleRequestOtp(
-    e: React.FormEvent
-  ) {
-
-    e.preventDefault();
-
-    setError("");
-
-    setMessage("");
-
-    setLoading(true);
-
-
     try {
+      setLoading(true);
 
-      const result =
-        await authService.activateStaff({
+      await login({
+        email: email.trim(),
+        password,
+      });
 
-          staffNumber:
-            staffNumber.trim(),
-
-          phoneNumber:
-            phoneNumber.trim(),
-
-        });
-
-
-      setMessage(
-        result.message ||
-        "OTP sent successfully."
+      toast.success(
+        "Login successful."
       );
 
-
-      setStaffStep("otp");
-
+      navigate("/dashboard");
 
     } catch (error: any) {
 
-      setError(
-
-        error?.response?.data?.message ||
-
-        "Unable to generate OTP. Please check your details."
-
+      toast.error(
+        error.response?.data?.message ??
+          "Unable to login."
       );
 
     } finally {
-
       setLoading(false);
-
     }
-
   }
 
 
-  // ===================================
-  // STAFF VERIFY OTP
-  // ===================================
+  // ==========================================
+  // STAFF — REQUEST OTP
+  // ==========================================
 
-  async function handleVerifyOtp(
-    e: React.FormEvent
+  async function handleStaffActivate(
+    event: React.FormEvent
   ) {
+    event.preventDefault();
 
-    e.preventDefault();
+    if (!staffNumber.trim()) {
+      toast.error(
+        "Please enter your staff number."
+      );
 
-    setError("");
+      return;
+    }
 
-    setLoading(true);
+    if (!phoneNumber.trim()) {
+      toast.error(
+        "Please enter your phone number."
+      );
 
+      return;
+    }
 
     try {
+      setLoading(true);
+
+      await authService.activateStaff({
+        staffNumber:
+          staffNumber.trim(),
+
+        phoneNumber:
+          phoneNumber.trim(),
+      });
+
+      toast.success(
+        "OTP generated successfully."
+      );
+
+      setStaffStep("otp");
+
+    } catch (error: any) {
+
+      toast.error(
+        error.response?.data?.message ??
+          "Unable to activate staff account."
+      );
+
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  // ==========================================
+  // STAFF — VERIFY OTP
+  // ==========================================
+
+  async function handleVerifyOtp(
+    event: React.FormEvent
+  ) {
+    event.preventDefault();
+
+    if (!otp.trim()) {
+      toast.error(
+        "Please enter the OTP."
+      );
+
+      return;
+    }
+
+    if (!/^\d{6}$/.test(otp.trim())) {
+      toast.error(
+        "OTP must be 6 digits."
+      );
+
+      return;
+    }
+
+    try {
+      setLoading(true);
 
       const result =
         await authService.verifyStaffOtp({
-
           staffNumber:
             staffNumber.trim(),
 
@@ -284,10 +177,13 @@ export default function Login() {
             phoneNumber.trim(),
 
           code:
-            code.trim(),
-
+            otp.trim(),
         });
 
+
+      // ======================================
+      // SAVE STAFF JWT + USER
+      // ======================================
 
       staffLogin(
         result.user,
@@ -295,685 +191,438 @@ export default function Login() {
       );
 
 
-      navigate("/");
+      toast.success(
+        "Login successful."
+      );
 
+
+      // ======================================
+      // STAFF DASHBOARD
+      // ======================================
+
+      navigate("/staff/dashboard");
 
     } catch (error: any) {
 
-      setError(
-
-        error?.response?.data?.message ||
-
-        "Invalid or expired OTP."
-
+      toast.error(
+        error.response?.data?.message ??
+          "Invalid or expired OTP."
       );
 
     } finally {
-
       setLoading(false);
-
     }
+  }
 
+
+  // ==========================================
+  // BACK TO STAFF ACTIVATION
+  // ==========================================
+
+  function handleBackToActivation() {
+    setOtp("");
+
+    setStaffStep(
+      "activate"
+    );
   }
 
 
   return (
+    <div className="min-h-screen bg-slate-50">
 
-    <div
-      className="
-        min-h-screen
-        flex
-        items-center
-        justify-center
-        bg-gray-100
-        px-4
-      "
-    >
+      <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-10">
 
+        <div className="w-full max-w-md">
 
-      <div
-        className="
-          w-full
-          max-w-[420px]
-          rounded-3xl
-          bg-white
-          p-8
-          shadow-xl
-        "
-      >
+          {/* ==================================
+              HEADER
+          ================================== */}
 
+          <div className="mb-8 text-center">
 
-        {/* ===========================
-            LOGO
-        ============================ */}
+            <h1 className="text-3xl font-bold text-slate-900">
+              MealSync
+            </h1>
 
-        <div className="mb-8 text-center">
-
-          <h1
-            className="
-              text-3xl
-              font-bold
-              text-[#B10F16]
-            "
-          >
-
-            MealSync
-
-          </h1>
-
-
-          <p className="mt-2 text-gray-500">
-
-            Login to continue
-
-          </p>
-
-        </div>
-
-
-        {/* ===========================
-            TOGGLE
-        ============================ */}
-
-        <div
-          className="
-            mb-7
-            grid
-            grid-cols-2
-            rounded-xl
-            bg-gray-100
-            p-1
-          "
-        >
-
-
-          {/* STAFF */}
-
-          <button
-            type="button"
-            onClick={() =>
-              changeMode("staff")
-            }
-            className={`
-              flex
-              items-center
-              justify-center
-              gap-2
-              rounded-lg
-              py-3
-              text-sm
-              font-semibold
-              transition
-
-              ${
-                mode === "staff"
-
-                  ? "bg-white text-[#B10F16] shadow-sm"
-
-                  : "text-gray-500"
-
-              }
-            `}
-          >
-
-            <Users size={17} />
-
-            Staff
-
-          </button>
-
-
-          {/* ADMIN */}
-
-          <button
-            type="button"
-            onClick={() =>
-              changeMode("admin")
-            }
-            className={`
-              flex
-              items-center
-              justify-center
-              gap-2
-              rounded-lg
-              py-3
-              text-sm
-              font-semibold
-              transition
-
-              ${
-                mode === "admin"
-
-                  ? "bg-white text-[#B10F16] shadow-sm"
-
-                  : "text-gray-500"
-
-              }
-            `}
-          >
-
-            <ShieldCheck size={17} />
-
-            Admin
-
-          </button>
-
-
-        </div>
-
-
-        {/* ===========================
-            ERROR
-        ============================ */}
-
-        {error && (
-
-          <div
-            className="
-              mb-5
-              rounded-xl
-              bg-red-50
-              px-4
-              py-3
-              text-sm
-              text-red-600
-            "
-          >
-
-            {error}
+            <p className="mt-2 text-sm text-slate-500">
+              Meal attendance and management system
+            </p>
 
           </div>
 
-        )}
+
+          {/* ==================================
+              LOGIN CARD
+          ================================== */}
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 
 
-        {/* ===========================
-            SUCCESS MESSAGE
-        ============================ */}
+            {/* ==================================
+                LOGIN TYPE
+            ================================== */}
 
-        {message && (
+            <div className="mb-7 grid grid-cols-2 rounded-xl bg-slate-100 p-1">
 
-          <div
-            className="
-              mb-5
-              rounded-xl
-              bg-green-50
-              px-4
-              py-3
-              text-sm
-              text-green-700
-            "
-          >
-
-            {message}
-
-          </div>
-
-        )}
-
-
-        {/* ===========================
-            ADMIN LOGIN
-        ============================ */}
-
-        {mode === "admin" && (
-
-          <form
-            onSubmit={
-              handleAdminLogin
-            }
-            className="space-y-5"
-          >
-
-
-            <div>
-
-              <label
-                className="
-                  mb-2
-                  block
-                  text-sm
-                  font-medium
-                  text-gray-700
-                "
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginType("staff");
+                  setStaffStep("activate");
+                }}
+                className={`rounded-lg py-2.5 text-sm font-semibold transition ${
+                  loginType === "staff"
+                    ? "bg-white text-[#B10F16] shadow-sm"
+                    : "text-slate-500"
+                }`}
               >
-
-                Email Address
-
-              </label>
+                Staff
+              </button>
 
 
-              <input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
-                required
-                className="
-                  w-full
-                  rounded-xl
-                  border
-                  border-gray-300
-                  px-4
-                  py-3
-                  outline-none
-                  transition
-                  focus:border-[#B10F16]
-                "
-              />
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginType("admin");
+                }}
+                className={`rounded-lg py-2.5 text-sm font-semibold transition ${
+                  loginType === "admin"
+                    ? "bg-white text-[#B10F16] shadow-sm"
+                    : "text-slate-500"
+                }`}
+              >
+                Admin
+              </button>
 
             </div>
 
 
-            <div>
+            {/* ==================================
+                STAFF LOGIN
+            ================================== */}
 
-              <label
-                className="
-                  mb-2
-                  block
-                  text-sm
-                  font-medium
-                  text-gray-700
-                "
+            {loginType === "staff" && (
+
+              <>
+                {staffStep === "activate" ? (
+
+                  <form
+                    onSubmit={
+                      handleStaffActivate
+                    }
+                    className="space-y-5"
+                  >
+
+                    <div>
+
+                      <h2 className="text-xl font-bold text-slate-900">
+                        Staff Login
+                      </h2>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        Enter your staff number and registered phone number.
+                      </p>
+
+                    </div>
+
+
+                    {/* STAFF NUMBER */}
+
+                    <div>
+
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Staff Number
+                      </label>
+
+                      <div className="relative">
+
+                        <UserRound
+                          size={18}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        />
+
+                        <input
+                          type="text"
+                          value={staffNumber}
+                          onChange={(event) =>
+                            setStaffNumber(
+                              event.target.value
+                            )
+                          }
+                          placeholder="e.g. ST001"
+                          className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
+                        />
+
+                      </div>
+
+                    </div>
+
+
+                    {/* PHONE */}
+
+                    <div>
+
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Phone Number
+                      </label>
+
+                      <div className="relative">
+
+                        <UserRound
+                          size={18}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        />
+
+                        <input
+                          type="tel"
+                          value={phoneNumber}
+                          onChange={(event) =>
+                            setPhoneNumber(
+                              event.target.value
+                            )
+                          }
+                          placeholder="08012345678"
+                          className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
+                        />
+
+                      </div>
+
+                    </div>
+
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#B10F16] py-3.5 font-semibold text-white transition hover:bg-[#900d12] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+
+                      {loading
+                        ? "Sending OTP..."
+                        : "Continue"}
+
+                    </button>
+
+                  </form>
+
+                ) : (
+
+                  /* ==================================
+                     OTP
+                  ================================== */
+
+                  <form
+                    onSubmit={
+                      handleVerifyOtp
+                    }
+                    className="space-y-5"
+                  >
+
+                    <div>
+
+                      <h2 className="text-xl font-bold text-slate-900">
+                        Verify OTP
+                      </h2>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        Enter the 6-digit OTP generated for your account.
+                      </p>
+
+                    </div>
+
+
+                    <div>
+
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        OTP Code
+                      </label>
+
+                      <div className="relative">
+
+                        <LockKeyhole
+                          size={18}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        />
+
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={otp}
+                          onChange={(event) =>
+                            setOtp(
+                              event.target.value.replace(
+                                /\D/g,
+                                ""
+                              )
+                            )
+                          }
+                          placeholder="000000"
+                          className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 text-center text-lg font-semibold tracking-[0.35em] outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
+                        />
+
+                      </div>
+
+                    </div>
+
+
+                    <button
+                      type="submit"
+                      disabled={
+                        loading ||
+                        otp.length !== 6
+                      }
+                      className="flex w-full items-center justify-center rounded-xl bg-[#B10F16] py-3.5 font-semibold text-white transition hover:bg-[#900d12] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+
+                      {loading
+                        ? "Verifying..."
+                        : "Verify OTP"}
+
+                    </button>
+
+
+                    <button
+                      type="button"
+                      onClick={
+                        handleBackToActivation
+                      }
+                      disabled={loading}
+                      className="w-full text-sm font-medium text-slate-500 transition hover:text-[#B10F16]"
+                    >
+                      ← Change staff details
+                    </button>
+
+                  </form>
+
+                )}
+
+              </>
+
+            )}
+
+
+            {/* ==================================
+                ADMIN LOGIN
+            ================================== */}
+
+            {loginType === "admin" && (
+
+              <form
+                onSubmit={
+                  handleAdminLogin
+                }
+                className="space-y-5"
               >
 
-                Password
+                <div>
 
-              </label>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Admin Login
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Sign in with your administrator credentials.
+                  </p>
+
+                </div>
 
 
-              <div className="relative">
+                {/* EMAIL */}
 
-                <input
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) =>
-                    setPassword(e.target.value)
-                  }
-                  required
-                  className="
-                    w-full
-                    rounded-xl
-                    border
-                    border-gray-300
-                    px-4
-                    py-3
-                    pr-12
-                    outline-none
-                    transition
-                    focus:border-[#B10F16]
-                  "
-                />
+                <div>
+
+                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                    Email
+                  </label>
+
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) =>
+                      setEmail(
+                        event.target.value
+                      )
+                    }
+                    placeholder="admin@example.com"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
+                  />
+
+                </div>
+
+
+                {/* PASSWORD */}
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                    Password
+                  </label>
+
+                  <div className="relative">
+
+                    <input
+                      type={
+                        showPassword
+                          ? "text"
+                          : "password"
+                      }
+                      value={password}
+                      onChange={(event) =>
+                        setPassword(
+                          event.target.value
+                        )
+                      }
+                      placeholder="Enter password"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 pr-11 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPassword(
+                          (current) =>
+                            !current
+                        )
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+
+                      {showPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+
+                    </button>
+
+                  </div>
+
+                </div>
 
 
                 <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword(
-                      !showPassword
-                    )
-                  }
-                  className="
-                    absolute
-                    right-4
-                    top-1/2
-                    -translate-y-1/2
-                    text-gray-400
-                  "
+                  type="submit"
+                  disabled={loading}
+                  className="flex w-full items-center justify-center rounded-xl bg-[#B10F16] py-3.5 font-semibold text-white transition hover:bg-[#900d12] disabled:cursor-not-allowed disabled:opacity-60"
                 >
 
-                  {showPassword
-
-                    ? <EyeOff size={19} />
-
-                    : <Eye size={19} />
-
-                  }
+                  {loading
+                    ? "Signing in..."
+                    : "Login"}
 
                 </button>
 
-              </div>
+              </form>
 
-            </div>
+            )}
 
+          </div>
 
-            <button
-              disabled={loading}
-              className="
-                flex
-                w-full
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                bg-[#B10F16]
-                py-3
-                font-semibold
-                text-white
-                transition
-                hover:bg-[#8D0B11]
-                disabled:opacity-60
-              "
-            >
-
-              {loading && (
-
-                <Loader2
-                  size={18}
-                  className="animate-spin"
-                />
-
-              )}
-
-              {loading
-                ? "Logging in..."
-                : "Login"
-              }
-
-            </button>
-
-          </form>
-
-        )}
-
-
-        {/* ===========================
-            STAFF DETAILS
-        ============================ */}
-
-        {mode === "staff" &&
-          staffStep === "details" && (
-
-          <form
-            onSubmit={
-              handleRequestOtp
-            }
-            className="space-y-5"
-          >
-
-
-            <div>
-
-              <label
-                className="
-                  mb-2
-                  block
-                  text-sm
-                  font-medium
-                  text-gray-700
-                "
-              >
-
-                Staff Number
-
-              </label>
-
-
-              <input
-                type="text"
-                placeholder="e.g. STF001"
-                value={staffNumber}
-                onChange={(e) =>
-                  setStaffNumber(
-                    e.target.value
-                  )
-                }
-                required
-                className="
-                  w-full
-                  rounded-xl
-                  border
-                  border-gray-300
-                  px-4
-                  py-3
-                  uppercase
-                  outline-none
-                  focus:border-[#B10F16]
-                "
-              />
-
-            </div>
-
-
-            <div>
-
-              <label
-                className="
-                  mb-2
-                  block
-                  text-sm
-                  font-medium
-                  text-gray-700
-                "
-              >
-
-                Phone Number
-
-              </label>
-
-
-              <input
-                type="tel"
-                placeholder="08012345678"
-                value={phoneNumber}
-                onChange={(e) =>
-                  setPhoneNumber(
-                    e.target.value
-                  )
-                }
-                required
-                className="
-                  w-full
-                  rounded-xl
-                  border
-                  border-gray-300
-                  px-4
-                  py-3
-                  outline-none
-                  focus:border-[#B10F16]
-                "
-              />
-
-            </div>
-
-
-            <button
-              disabled={loading}
-              className="
-                flex
-                w-full
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                bg-[#B10F16]
-                py-3
-                font-semibold
-                text-white
-                hover:bg-[#8D0B11]
-                disabled:opacity-60
-              "
-            >
-
-              {loading && (
-
-                <Loader2
-                  size={18}
-                  className="animate-spin"
-                />
-
-              )}
-
-              {loading
-                ? "Generating OTP..."
-                : "Continue"
-              }
-
-            </button>
-
-          </form>
-
-        )}
-
-
-        {/* ===========================
-            OTP
-        ============================ */}
-
-        {mode === "staff" &&
-          staffStep === "otp" && (
-
-          <form
-            onSubmit={
-              handleVerifyOtp
-            }
-            className="space-y-5"
-          >
-
-
-            <div className="text-center">
-
-              <h2 className="text-xl font-bold">
-
-                Verify OTP
-
-              </h2>
-
-
-              <p
-                className="
-                  mt-2
-                  text-sm
-                  text-gray-500
-                "
-              >
-
-                Enter the 6-digit code sent to
-
-                <br />
-
-                <span className="font-semibold">
-
-                  {phoneNumber}
-
-                </span>
-
-              </p>
-
-            </div>
-
-
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="000000"
-              value={code}
-              onChange={(e) =>
-                setCode(
-
-                  e.target.value
-                    .replace(/\D/g, "")
-                    .slice(0, 6)
-
-                )
-              }
-              required
-              className="
-                w-full
-                rounded-xl
-                border
-                border-gray-300
-                px-4
-                py-4
-                text-center
-                text-2xl
-                font-bold
-                tracking-[0.5em]
-                outline-none
-                focus:border-[#B10F16]
-              "
-            />
-
-
-            <button
-              disabled={
-                loading ||
-                code.length !== 6
-              }
-              className="
-                flex
-                w-full
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                bg-[#B10F16]
-                py-3
-                font-semibold
-                text-white
-                hover:bg-[#8D0B11]
-                disabled:opacity-60
-              "
-            >
-
-              {loading && (
-
-                <Loader2
-                  size={18}
-                  className="animate-spin"
-                />
-
-              )}
-
-              {loading
-                ? "Verifying..."
-                : "Verify & Login"
-              }
-
-            </button>
-
-
-            <button
-              type="button"
-              onClick={() => {
-
-                setStaffStep("details");
-
-                setCode("");
-
-                setMessage("");
-
-              }}
-              className="
-                w-full
-                text-sm
-                font-medium
-                text-gray-500
-                hover:text-[#B10F16]
-              "
-            >
-
-              ← Change details
-
-            </button>
-
-          </form>
-
-        )}
-
+        </div>
 
       </div>
 
     </div>
-
   );
-
 }

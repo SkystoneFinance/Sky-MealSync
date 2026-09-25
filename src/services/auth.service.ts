@@ -68,7 +68,7 @@ export const authService = {
 
 
   // ===============================
-  // CURRENT USER
+  // ADMIN CURRENT USER
   // ===============================
 
   async me() {
@@ -80,6 +80,22 @@ export const authService = {
       }>("/auth/me");
 
     return res.data.user;
+  },
+
+
+  // ===============================
+  // STAFF CURRENT PROFILE
+  // ===============================
+
+  async staffMe() {
+
+    const res =
+      await api.get<{
+        success: boolean;
+        data: User;
+      }>("/staff-auth/me");
+
+    return res.data.data;
   },
 
 };

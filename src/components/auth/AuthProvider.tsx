@@ -19,24 +19,18 @@ interface AuthContextType {
 
   loading: boolean;
 
-
   // ADMIN LOGIN
-
   login: (
     data: LoginPayload
   ) => Promise<void>;
 
-
   // STAFF LOGIN
-
   staffLogin: (
     user: StaffUser,
     token: string
   ) => void;
 
-
   logout: () => void;
-
 }
 
 
@@ -52,10 +46,8 @@ export default function AuthProvider({
   children: React.ReactNode;
 }) {
 
-
   const [user, setUser] =
     useState<User | null>(null);
-
 
   const [loading, setLoading] =
     useState(true);
@@ -67,74 +59,120 @@ export default function AuthProvider({
 
   useEffect(() => {
 
-    const token =
-      localStorage.getItem("token");
+    async function restoreAuth() {
+
+      const token =
+        localStorage.getItem("token");
+
+      const savedUser =
+        localStorage.getItem("user");
 
 
-    const savedUser =
-      localStorage.getItem("user");
+      if (!token) {
+
+        setLoading(false);
+
+        return;
+
+      }
 
 
-    if (!token) {
-
-      setLoading(false);
-
-      return;
-
-    }
+      let storedUser:
+        User | null = null;
 
 
-    // Restore immediately from storage
-    if (savedUser) {
+      // ---------------------------------
+      // RESTORE USER FROM STORAGE
+      // ---------------------------------
+
+      if (savedUser) {
+
+        try {
+
+          storedUser =
+            JSON.parse(savedUser);
+
+          setUser(storedUser);
+
+        } catch {
+
+          localStorage.removeItem(
+            "user"
+          );
+
+        }
+
+      }
+
 
       try {
 
-        setUser(
-          JSON.parse(savedUser)
+        // ---------------------------------
+        // STAFF SESSION
+        // ---------------------------------
+
+        if (
+          storedUser?.role === "USER"
+        ) {
+
+          const staff =
+            await authService.staffMe();
+
+          setUser(staff);
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify(staff)
+          );
+
+        }
+
+        // ---------------------------------
+        // ADMIN SESSION
+        // ---------------------------------
+
+        else {
+
+          const currentUser =
+            await authService.me();
+
+          setUser(currentUser);
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify(currentUser)
+          );
+
+        }
+
+      } catch (error) {
+
+        console.error(
+          "Authentication restore failed:",
+          error
         );
 
-      } catch {
 
-        localStorage.removeItem("user");
+        localStorage.removeItem(
+          "token"
+        );
+
+        localStorage.removeItem(
+          "user"
+        );
+
+        setUser(null);
+
+      } finally {
+
+        setLoading(false);
 
       }
 
     }
 
 
-    // Verify admin token with backend
-    authService
-      .me()
-      .then((currentUser) => {
-
-        setUser(currentUser);
-
-        localStorage.setItem(
-          "user",
-          JSON.stringify(currentUser)
-        );
-
-      })
-      .catch(() => {
-
-        // Don't immediately destroy staff sessions
-        // because staff authentication currently
-        // uses a different login response.
-
-        if (!savedUser) {
-
-          localStorage.removeItem("token");
-
-          setUser(null);
-
-        }
-
-      })
-      .finally(() => {
-
-        setLoading(false);
-
-      });
+    restoreAuth();
 
   }, []);
 
@@ -200,9 +238,13 @@ export default function AuthProvider({
 
   function logout() {
 
-    localStorage.removeItem("token");
+    localStorage.removeItem(
+      "token"
+    );
 
-    localStorage.removeItem("user");
+    localStorage.removeItem(
+      "user"
+    );
 
     setUser(null);
 
