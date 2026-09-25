@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  UserRound,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -15,18 +20,22 @@ export default function Login() {
     "admin" | "staff"
   >("staff");
 
-  const [staffStep, setStaffStep] = useState<
-    "activate" | "otp"
-  >("activate");
+  // ==========================================
+  // STAFF
+  // ==========================================
 
   const [staffNumber, setStaffNumber] =
     useState("");
 
-  const [phoneNumber, setPhoneNumber] =
+  const [staffPin, setStaffPin] =
     useState("");
 
-  const [otp, setOtp] =
-    useState("");
+  const [showStaffPin, setShowStaffPin] =
+    useState(false);
+
+  // ==========================================
+  // ADMIN
+  // ==========================================
 
   const [email, setEmail] =
     useState("");
@@ -36,6 +45,10 @@ export default function Login() {
 
   const [showPassword, setShowPassword] =
     useState(false);
+
+  // ==========================================
+  // LOADING
+  // ==========================================
 
   const [loading, setLoading] =
     useState(false);
@@ -73,7 +86,6 @@ export default function Login() {
       navigate("/dashboard");
 
     } catch (error: any) {
-
       toast.error(
         error.response?.data?.message ??
           "Unable to login."
@@ -86,80 +98,25 @@ export default function Login() {
 
 
   // ==========================================
-  // STAFF — REQUEST OTP
+  // STAFF LOGIN
   // ==========================================
 
-  async function handleStaffActivate(
+  async function handleStaffLogin(
     event: React.FormEvent
   ) {
     event.preventDefault();
 
     if (!staffNumber.trim()) {
       toast.error(
-        "Please enter your staff number."
+        "Please enter your staff ID."
       );
 
       return;
     }
 
-    if (!phoneNumber.trim()) {
+    if (!staffPin.trim()) {
       toast.error(
-        "Please enter your phone number."
-      );
-
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      await authService.activateStaff({
-        staffNumber:
-          staffNumber.trim(),
-
-        phoneNumber:
-          phoneNumber.trim(),
-      });
-
-      toast.success(
-        "OTP generated successfully."
-      );
-
-      setStaffStep("otp");
-
-    } catch (error: any) {
-
-      toast.error(
-        error.response?.data?.message ??
-          "Unable to activate staff account."
-      );
-
-    } finally {
-      setLoading(false);
-    }
-  }
-
-
-  // ==========================================
-  // STAFF — VERIFY OTP
-  // ==========================================
-
-  async function handleVerifyOtp(
-    event: React.FormEvent
-  ) {
-    event.preventDefault();
-
-    if (!otp.trim()) {
-      toast.error(
-        "Please enter the OTP."
-      );
-
-      return;
-    }
-
-    if (!/^\d{6}$/.test(otp.trim())) {
-      toast.error(
-        "OTP must be 6 digits."
+        "Please enter your PIN."
       );
 
       return;
@@ -167,22 +124,32 @@ export default function Login() {
 
     try {
       setLoading(true);
+
+      /*
+       * Staff authentication endpoint
+       *
+       * Expected backend request:
+       *
+       * POST /staff-auth/login
+       *
+       * {
+       *   staffNumber: "ST001",
+       *   pin: "1234"
+       * }
+       */
 
       const result =
-        await authService.verifyStaffOtp({
+        await authService.staffLogin({
           staffNumber:
             staffNumber.trim(),
 
-          phoneNumber:
-            phoneNumber.trim(),
-
-          code:
-            otp.trim(),
+          pin:
+            staffPin.trim(),
         });
 
 
       // ======================================
-      // SAVE STAFF JWT + USER
+      // SAVE STAFF SESSION
       // ======================================
 
       staffLogin(
@@ -206,25 +173,12 @@ export default function Login() {
 
       toast.error(
         error.response?.data?.message ??
-          "Invalid or expired OTP."
+          "Invalid staff ID or PIN."
       );
 
     } finally {
       setLoading(false);
     }
-  }
-
-
-  // ==========================================
-  // BACK TO STAFF ACTIVATION
-  // ==========================================
-
-  function handleBackToActivation() {
-    setOtp("");
-
-    setStaffStep(
-      "activate"
-    );
   }
 
 
@@ -258,18 +212,18 @@ export default function Login() {
 
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 
-
             {/* ==================================
                 LOGIN TYPE
             ================================== */}
 
             <div className="mb-7 grid grid-cols-2 rounded-xl bg-slate-100 p-1">
 
+              {/* STAFF */}
+
               <button
                 type="button"
                 onClick={() => {
                   setLoginType("staff");
-                  setStaffStep("activate");
                 }}
                 className={`rounded-lg py-2.5 text-sm font-semibold transition ${
                   loginType === "staff"
@@ -280,6 +234,8 @@ export default function Login() {
                 Staff
               </button>
 
+
+              {/* ADMIN */}
 
               <button
                 type="button"
@@ -304,200 +260,139 @@ export default function Login() {
 
             {loginType === "staff" && (
 
-              <>
-                {staffStep === "activate" ? (
+              <form
+                onSubmit={handleStaffLogin}
+                className="space-y-5"
+              >
 
-                  <form
-                    onSubmit={
-                      handleStaffActivate
-                    }
-                    className="space-y-5"
-                  >
+                <div>
 
-                    <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Staff Login
+                  </h2>
 
-                      <h2 className="text-xl font-bold text-slate-900">
-                        Staff Login
-                      </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Sign in with your staff ID and PIN.
+                  </p>
 
-                      <p className="mt-1 text-sm text-slate-500">
-                        Enter your staff number and registered phone number.
-                      </p>
-
-                    </div>
+                </div>
 
 
-                    {/* STAFF NUMBER */}
+                {/* ==================================
+                    STAFF ID
+                ================================== */}
 
-                    <div>
+                <div>
 
-                      <label className="mb-2 block text-sm font-medium text-slate-700">
-                        Staff Number
-                      </label>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                    Staff ID
+                  </label>
 
-                      <div className="relative">
+                  <div className="relative">
 
-                        <UserRound
-                          size={18}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
+                    <UserRound
+                      size={18}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
 
-                        <input
-                          type="text"
-                          value={staffNumber}
-                          onChange={(event) =>
-                            setStaffNumber(
-                              event.target.value
-                            )
-                          }
-                          placeholder="e.g. ST001"
-                          className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
-                        />
-
-                      </div>
-
-                    </div>
-
-
-                    {/* PHONE */}
-
-                    <div>
-
-                      <label className="mb-2 block text-sm font-medium text-slate-700">
-                        Phone Number
-                      </label>
-
-                      <div className="relative">
-
-                        <UserRound
-                          size={18}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
-
-                        <input
-                          type="tel"
-                          value={phoneNumber}
-                          onChange={(event) =>
-                            setPhoneNumber(
-                              event.target.value
-                            )
-                          }
-                          placeholder="08012345678"
-                          className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
-                        />
-
-                      </div>
-
-                    </div>
-
-
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#B10F16] py-3.5 font-semibold text-white transition hover:bg-[#900d12] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-
-                      {loading
-                        ? "Sending OTP..."
-                        : "Continue"}
-
-                    </button>
-
-                  </form>
-
-                ) : (
-
-                  /* ==================================
-                     OTP
-                  ================================== */
-
-                  <form
-                    onSubmit={
-                      handleVerifyOtp
-                    }
-                    className="space-y-5"
-                  >
-
-                    <div>
-
-                      <h2 className="text-xl font-bold text-slate-900">
-                        Verify OTP
-                      </h2>
-
-                      <p className="mt-1 text-sm text-slate-500">
-                        Enter the 6-digit OTP generated for your account.
-                      </p>
-
-                    </div>
-
-
-                    <div>
-
-                      <label className="mb-2 block text-sm font-medium text-slate-700">
-                        OTP Code
-                      </label>
-
-                      <div className="relative">
-
-                        <LockKeyhole
-                          size={18}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
-
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={6}
-                          value={otp}
-                          onChange={(event) =>
-                            setOtp(
-                              event.target.value.replace(
-                                /\D/g,
-                                ""
-                              )
-                            )
-                          }
-                          placeholder="000000"
-                          className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 text-center text-lg font-semibold tracking-[0.35em] outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
-                        />
-
-                      </div>
-
-                    </div>
-
-
-                    <button
-                      type="submit"
-                      disabled={
-                        loading ||
-                        otp.length !== 6
+                    <input
+                      type="text"
+                      value={staffNumber}
+                      onChange={(event) =>
+                        setStaffNumber(
+                          event.target.value
+                        )
                       }
-                      className="flex w-full items-center justify-center rounded-xl bg-[#B10F16] py-3.5 font-semibold text-white transition hover:bg-[#900d12] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
+                      placeholder="e.g. ST001"
+                      autoComplete="username"
+                      className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
+                    />
 
-                      {loading
-                        ? "Verifying..."
-                        : "Verify OTP"}
+                  </div>
 
-                    </button>
+                </div>
 
+
+                {/* ==================================
+                    PIN
+                ================================== */}
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                    PIN
+                  </label>
+
+                  <div className="relative">
+
+                    <LockKeyhole
+                      size={18}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      type={
+                        showStaffPin
+                          ? "text"
+                          : "password"
+                      }
+                      value={staffPin}
+                      onChange={(event) =>
+                        setStaffPin(
+                          event.target.value
+                        )
+                      }
+                      placeholder="Enter your PIN"
+                      inputMode="numeric"
+                      autoComplete="current-password"
+                      className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-11 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
+                    />
 
                     <button
                       type="button"
-                      onClick={
-                        handleBackToActivation
+                      onClick={() =>
+                        setShowStaffPin(
+                          (current) =>
+                            !current
+                        )
                       }
-                      disabled={loading}
-                      className="w-full text-sm font-medium text-slate-500 transition hover:text-[#B10F16]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
-                      ← Change staff details
+
+                      {showStaffPin ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+
                     </button>
 
-                  </form>
+                  </div>
 
-                )}
+                </div>
 
-              </>
+
+                {/* ==================================
+                    STAFF LOGIN BUTTON
+                ================================== */}
+
+                <button
+                  type="submit"
+                  disabled={
+                    loading ||
+                    !staffNumber.trim() ||
+                    !staffPin.trim()
+                  }
+                  className="flex w-full items-center justify-center rounded-xl bg-[#B10F16] py-3.5 font-semibold text-white transition hover:bg-[#900d12] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+
+                  {loading
+                    ? "Signing in..."
+                    : "Login"}
+
+                </button>
+
+              </form>
 
             )}
 
@@ -528,7 +423,9 @@ export default function Login() {
                 </div>
 
 
-                {/* EMAIL */}
+                {/* ==================================
+                    EMAIL
+                ================================== */}
 
                 <div>
 
@@ -545,13 +442,16 @@ export default function Login() {
                       )
                     }
                     placeholder="admin@example.com"
+                    autoComplete="email"
                     className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
                   />
 
                 </div>
 
 
-                {/* PASSWORD */}
+                {/* ==================================
+                    PASSWORD
+                ================================== */}
 
                 <div>
 
@@ -574,6 +474,7 @@ export default function Login() {
                         )
                       }
                       placeholder="Enter password"
+                      autoComplete="current-password"
                       className="w-full rounded-xl border border-slate-200 px-4 py-3 pr-11 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/10"
                     />
 
@@ -600,6 +501,10 @@ export default function Login() {
 
                 </div>
 
+
+                {/* ==================================
+                    ADMIN LOGIN BUTTON
+                ================================== */}
 
                 <button
                   type="submit"

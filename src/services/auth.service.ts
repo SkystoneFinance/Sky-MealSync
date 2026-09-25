@@ -8,6 +8,7 @@ import type {
   StaffVerifyOtpPayload,
   StaffOtpResponse,
   User,
+  StaffUser,
 } from "../types/auth";
 
 
@@ -97,5 +98,22 @@ export const authService = {
 
     return res.data.data;
   },
+
+  async staffLogin(data: {
+  staffNumber: string;
+  pin: string;
+}) {
+  const res = await api.post<{
+    success: boolean;
+    message: string;
+    token: string;
+    user: StaffUser;
+  }>(
+    "/staff-auth/login",
+    data
+  );
+
+  return res.data;
+},
 
 };
