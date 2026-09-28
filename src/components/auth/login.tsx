@@ -79,7 +79,7 @@ export default function Login() {
     } catch (error: any) {
       toast.error(
         error.response?.data?.message ??
-          "Unable to login."
+          "We couldn’t log you in. Please check your email and password and try again."
       );
 
     } finally {
@@ -150,7 +150,7 @@ export default function Login() {
     } catch (error: any) {
       toast.error(
         error.response?.data?.message ??
-          "Unable to activate staff account."
+          "We couldn’t set up your account. Please check your Staff ID and PIN and try again."
       );
 
     } finally {
@@ -221,7 +221,7 @@ export default function Login() {
 
       toast.error(
         error.response?.data?.message ??
-          "Invalid staff number or PIN."
+          "Incorrect Staff ID or PIN. Please check and try again."
       );
 
     } finally {
