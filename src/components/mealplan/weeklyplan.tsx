@@ -256,26 +256,25 @@ const updateSelection =
     );
   }
 
-  function isDateLocked(dateString: string) {
+function isDateLocked(dateString: string) {
   const today = new Date();
 
-  today.setHours(
-    0,
-    0,
-    0,
-    0
-  );
+  today.setHours(0, 0, 0, 0);
 
   const selectedDate = new Date(
     `${dateString}T00:00:00`
   );
 
-  selectedDate.setHours(
-    0,
-    0,
-    0,
-    0
-  );
+  selectedDate.setHours(0, 0, 0, 0);
+
+  // Monday (today) should remain selectable
+  const isCurrentMonday =
+    today.getDay() === 1 &&
+    selectedDate.getTime() === today.getTime();
+
+  if (isCurrentMonday) {
+    return false;
+  }
 
   return selectedDate <= today;
 }
