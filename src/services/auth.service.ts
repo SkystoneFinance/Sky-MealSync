@@ -5,18 +5,16 @@ import type {
   LoginResponse,
   StaffActivatePayload,
   StaffActivateResponse,
-  StaffVerifyOtpPayload,
-  StaffOtpResponse,
-  User,
   StaffUser,
+  User,
 } from "../types/auth";
 
 
 export const authService = {
 
-  // ===============================
+  // ==========================================
   // ADMIN LOGIN
-  // ===============================
+  // ==========================================
 
   async login(
     data: LoginPayload
@@ -32,9 +30,9 @@ export const authService = {
   },
 
 
-  // ===============================
-  // STAFF ACTIVATE / REQUEST OTP
-  // ===============================
+  // ==========================================
+  // STAFF FIRST-TIME ACTIVATION
+  // ==========================================
 
   async activateStaff(
     data: StaffActivatePayload
@@ -50,17 +48,25 @@ export const authService = {
   },
 
 
-  // ===============================
-  // STAFF VERIFY OTP
-  // ===============================
+  // ==========================================
+  // STAFF LOGIN
+  // ==========================================
 
-  async verifyStaffOtp(
-    data: StaffVerifyOtpPayload
+  async staffLogin(
+    data: {
+      staffNumber: string;
+      pin: string;
+    }
   ) {
 
     const res =
-      await api.post<StaffOtpResponse>(
-        "/staff-auth/verify-otp",
+      await api.post<{
+        success: boolean;
+        message: string;
+        token: string;
+        user: StaffUser;
+      }>(
+        "/staff-auth/login",
         data
       );
 
@@ -68,9 +74,9 @@ export const authService = {
   },
 
 
-  // ===============================
+  // ==========================================
   // ADMIN CURRENT USER
-  // ===============================
+  // ==========================================
 
   async me() {
 
@@ -78,15 +84,17 @@ export const authService = {
       await api.get<{
         success: boolean;
         user: User;
-      }>("/auth/me");
+      }>(
+        "/auth/me"
+      );
 
     return res.data.user;
   },
 
 
-  // ===============================
+  // ==========================================
   // STAFF CURRENT PROFILE
-  // ===============================
+  // ==========================================
 
   async staffMe() {
 
@@ -94,26 +102,11 @@ export const authService = {
       await api.get<{
         success: boolean;
         data: User;
-      }>("/staff-auth/me");
+      }>(
+        "/staff-auth/me"
+      );
 
     return res.data.data;
   },
-
-  async staffLogin(data: {
-  staffNumber: string;
-  pin: string;
-}) {
-  const res = await api.post<{
-    success: boolean;
-    message: string;
-    token: string;
-    user: StaffUser;
-  }>(
-    "/staff-auth/login",
-    data
-  );
-
-  return res.data;
-},
 
 };

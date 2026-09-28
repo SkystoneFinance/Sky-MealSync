@@ -81,8 +81,8 @@ export interface LoginPayload {
 
 export interface StaffActivatePayload {
   staffNumber: string;
-
-  phoneNumber: string;
+  pin: string;
+  confirmPin: string;
 }
 
 
