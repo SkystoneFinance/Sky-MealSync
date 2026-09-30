@@ -41,11 +41,9 @@ const DAY_NAMES: DayKey[] = [
 ];
 
 function getMonday(date: Date) {
-  const result =
-    new Date(date);
+  const result = new Date(date);
 
-  const day =
-    result.getDay();
+  const day = result.getDay();
 
   const difference =
     day === 0
@@ -61,21 +59,16 @@ function getMonday(date: Date) {
   return result;
 }
 
-function formatDate(
-  date: Date
-) {
-  const year =
-    date.getFullYear();
+function formatDate(date: Date) {
+  const year = date.getFullYear();
 
-  const month =
-    String(
-      date.getMonth() + 1
-    ).padStart(2, "0");
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
 
-  const day =
-    String(
-      date.getDate()
-    ).padStart(2, "0");
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
@@ -96,8 +89,7 @@ export default function WeeklyMealPlan() {
   );
 
   const monday = useMemo(() => {
-    const date =
-      getMonday(today);
+    const date = getMonday(today);
 
     date.setDate(
       date.getDate() +
@@ -107,25 +99,22 @@ export default function WeeklyMealPlan() {
     return date;
   }, [today, weekOffset]);
 
-  const days: Day[] =
-    useMemo(() => {
-      return DAY_NAMES.map(
-        (name, index) => {
-          const date =
-            new Date(monday);
+  const days: Day[] = useMemo(() => {
+    return DAY_NAMES.map(
+      (name, index) => {
+        const date = new Date(monday);
 
-          date.setDate(
-            monday.getDate() +
-              index
-          );
+        date.setDate(
+          monday.getDate() + index
+        );
 
-          return {
-            name,
-            date: formatDate(date),
-          };
-        }
-      );
-    }, [monday]);
+        return {
+          name,
+          date: formatDate(date),
+        };
+      }
+    );
+  }, [monday]);
 
   const {
     data: selections = [],
@@ -133,10 +122,10 @@ export default function WeeklyMealPlan() {
   } = useMyMealSelections();
 
   const createSelection =
-  useCreateMealSelection();
+    useCreateMealSelection();
 
-const updateSelection =
-  useUpdateMealSelection();
+  const updateSelection =
+    useUpdateMealSelection();
 
   const handleSelect = (
     date: string,
@@ -148,6 +137,10 @@ const updateSelection =
         [date]: foodOptionId,
       })
     );
+
+    // Allow another submission after
+    // making a new/change selection.
+    setSubmitted(false);
   };
 
   const getExistingSelection = (
@@ -155,9 +148,7 @@ const updateSelection =
   ) => {
     return selections.find(
       (selection) =>
-        selection.mealDate.startsWith(
-          date
-        )
+        selection.mealDate.startsWith(date)
     );
   };
 
@@ -172,80 +163,182 @@ const updateSelection =
     );
   };
 
-  const handleSubmit = async () => {
-  const missingDay = days.find(
-    (day) =>
-      !getSelectedFood(day.date)
-  );
+  // =========================================
+  // CHECK IF DATE IS LOCKED
+  // =========================================
 
-  if (missingDay) {
-    alert(
-      `Please select a meal for ${missingDay.name}.`
+  function isDateLocked(
+    dateString: string
+  ) {
+    const today = new Date();
+
+    today.setHours(
+      0,
+      0,
+      0,
+      0
     );
 
-    return;
+    const selectedDate = new Date(
+      `${dateString}T00:00:00`
+    );
+
+    selectedDate.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    // =========================================
+    // PAST DATES ARE ALWAYS LOCKED
+    // =========================================
+
+    if (selectedDate < today) {
+      return true;
+    }
+
+    // =========================================
+    // TODAY
+    // =========================================
+    // Today is open only when the staff member
+    // has not already selected a meal.
+    // =========================================
+
+    if (
+      selectedDate.getTime() ===
+      today.getTime()
+    ) {
+      const existingSelection =
+        getExistingSelection(dateString);
+
+      return Boolean(existingSelection);
+    }
+
+    // =========================================
+    // FUTURE DATES ARE OPEN
+    // =========================================
+
+    return false;
   }
 
-  try {
-    for (const day of days) {
-      const foodOptionId =
-        getSelectedFood(day.date);
+  // =========================================
+  // CHECK IF THERE IS SOMETHING TO SAVE
+  // =========================================
+
+  const hasChanges = useMemo(() => {
+    return days.some((day) => {
+      const selectedFoodId =
+        selectedMeals[day.date];
+
+      if (!selectedFoodId) {
+        return false;
+      }
 
       const existing =
         getExistingSelection(day.date);
 
-        //Meal Changed Logic....
-
-      // ==========================
-      // NEW SELECTION
-      // ==========================
-
+      // New selection
       if (!existing) {
-        await createSelection.mutateAsync({
-          foodOptionId,
-          mealDate: day.date,
-        });
-
-        continue;
+        return !isDateLocked(day.date);
       }
 
-      // ==========================
-      // CHANGE FUTURE SELECTION
-      // ==========================
-
-      if (
+      // Changed future selection
+      return (
+        !isDateLocked(day.date) &&
         existing.foodOptionId !==
-        foodOptionId
-      ) {
-        await updateSelection.mutateAsync({
-          id: existing.id,
-          foodOptionId,
-        });
-      }
+          selectedFoodId
+      );
+    });
+  }, [
+    days,
+    selectedMeals,
+    selections,
+  ]);
+
+  // =========================================
+  // SUBMIT MEAL SELECTIONS
+  // =========================================
+
+  const handleSubmit = async () => {
+    if (!hasChanges) {
+      return;
     }
 
-    setSubmitted(true);
+    try {
+      for (const day of days) {
+        const foodOptionId =
+          selectedMeals[day.date];
 
-  } catch (error) {
-    console.error(
-      "Failed to submit meal plan:",
-      error
-    );
+        const existing =
+          getExistingSelection(day.date);
 
-    alert(
-      "Something went wrong while saving your meal plan."
-    );
-  }
-};
+        // =========================================
+        // PAST / LOCKED DAYS
+        // =========================================
 
-  const hasAllSelections =
-    days.every(
-      (day) =>
-        Boolean(
-          getSelectedFood(day.date)
-        )
-    );
-    
+        if (isDateLocked(day.date)) {
+          continue;
+        }
+
+        // =========================================
+        // NO NEW SELECTION FOR THIS DAY
+        // =========================================
+        // This is important.
+        //
+        // Staff do NOT have to select every day.
+        // An empty day is simply skipped.
+        // =========================================
+
+        if (!foodOptionId) {
+          continue;
+        }
+
+        // =========================================
+        // CREATE NEW SELECTION
+        // =========================================
+
+        if (!existing) {
+          await createSelection.mutateAsync({
+            foodOptionId,
+            mealDate: day.date,
+          });
+
+          continue;
+        }
+
+        // =========================================
+        // UPDATE EXISTING FUTURE SELECTION
+        // =========================================
+
+        if (
+          existing.foodOptionId !==
+          foodOptionId
+        ) {
+          await updateSelection.mutateAsync({
+            id: existing.id,
+            foodOptionId,
+          });
+        }
+      }
+
+      setSubmitted(true);
+
+      // Clear local selections so the next
+      // interaction is based on fresh server data.
+      setSelectedMeals({});
+
+    } catch (error) {
+      console.error(
+        "Failed to submit meal plan:",
+        error
+      );
+
+      alert(
+        "Something went wrong while saving your meal plan."
+      );
+    }
+  };
 
   if (selectionsLoading) {
     return (
@@ -258,29 +351,6 @@ const updateSelection =
     );
   }
 
-function isDateLocked(dateString: string) {
-  const today = new Date();
-
-  today.setHours(0, 0, 0, 0);
-
-  const selectedDate = new Date(
-    `${dateString}T00:00:00`
-  );
-
-  selectedDate.setHours(0, 0, 0, 0);
-
-  // Monday (today) should remain selectable
-  const isCurrentMonday =
-    today.getDay() === 1 &&
-    selectedDate.getTime() === today.getTime();
-
-  if (isCurrentMonday) {
-    return false;
-  }
-
-  return selectedDate <= today;
-}
-
   return (
     <div className="space-y-6">
       {/* HEADER */}
@@ -292,8 +362,8 @@ function isDateLocked(dateString: string) {
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            Select your meal for each day
-            of the week.
+            Select your meal for the days
+            you want to receive a meal.
           </p>
         </div>
 
@@ -341,17 +411,21 @@ function isDateLocked(dateString: string) {
       <div className="space-y-6">
         {days.map((day) => (
           <DayMealSelector
-  key={day.date}
-  day={day}
-  selectedFoodId={getSelectedFood(day.date)}
-  onSelect={(foodId) =>
-    handleSelect(
-      day.date,
-      foodId
-    )
-  }
-  locked={isDateLocked(day.date)}
-/>
+            key={day.date}
+            day={day}
+            selectedFoodId={getSelectedFood(
+              day.date
+            )}
+            onSelect={(foodId) =>
+              handleSelect(
+                day.date,
+                foodId
+              )
+            }
+            locked={isDateLocked(
+              day.date
+            )}
+          />
         ))}
       </div>
 
@@ -361,14 +435,16 @@ function isDateLocked(dateString: string) {
         <button
           type="button"
           disabled={
-            !hasAllSelections ||
+            !hasChanges ||
             createSelection.isPending ||
+            updateSelection.isPending ||
             submitted
           }
           onClick={handleSubmit}
           className="flex items-center gap-2 rounded-xl bg-[#B10F16] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#920c12] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {createSelection.isPending ? (
+          {createSelection.isPending ||
+          updateSelection.isPending ? (
             <>
               <Loader2
                 size={18}
@@ -409,10 +485,7 @@ function DayMealSelector({
     data: foodOptions = [],
     isLoading,
     isError,
-  } =
-    useFoodOptionsByDate(
-      day.date
-    );
+  } = useFoodOptionsByDate(day.date);
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -439,15 +512,15 @@ function DayMealSelector({
         </div>
 
         {locked ? (
-  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-    🔒 Locked
-  </div>
-) : selectedFoodId ? (
-  <div className="flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
-    <Check size={14} />
-    Selected
-  </div>
-) : null}
+          <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            🔒 Locked
+          </div>
+        ) : selectedFoodId ? (
+          <div className="flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+            <Check size={14} />
+            Selected
+          </div>
+        ) : null}
       </div>
 
       {/* FOOD OPTIONS */}
@@ -479,21 +552,21 @@ function DayMealSelector({
 
               return (
                 <button
-                key={food.id}
-                type="button"
-                disabled={locked}
-                onClick={() => {
-                  if (!locked) {
-                    onSelect(food.id);
-                  }
-                }}
+                  key={food.id}
+                  type="button"
+                  disabled={locked}
+                  onClick={() => {
+                    if (!locked) {
+                      onSelect(food.id);
+                    }
+                  }}
                   className={`group overflow-hidden rounded-xl border-2 text-left transition ${
-                  selected
-                    ? "border-[#B10F16] bg-red-50"
-                    : locked
-                      ? "cursor-not-allowed border-gray-100 bg-gray-50 opacity-70"
-                      : "border-gray-100 bg-white hover:border-gray-300"
-                }`}
+                    selected
+                      ? "border-[#B10F16] bg-red-50"
+                      : locked
+                        ? "cursor-not-allowed border-gray-100 bg-gray-50 opacity-70"
+                        : "border-gray-100 bg-white hover:border-gray-300"
+                  }`}
                 >
                   <div className="relative h-40 overflow-hidden">
                     <img
@@ -543,5 +616,3 @@ function DayMealSelector({
     </section>
   );
 }
-
-
