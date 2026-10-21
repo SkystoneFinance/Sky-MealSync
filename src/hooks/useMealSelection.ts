@@ -1,12 +1,7 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   mealSelectionService,
-  type CreateMealSelectionPayload,
 } from "../services/mealSelection.service";
 
 
@@ -42,70 +37,5 @@ export function useMyMealSelectionByDate(
       ),
 
     enabled: Boolean(date),
-  });
-}
-
-
-// =========================================
-// CREATE MEAL SELECTION
-// =========================================
-
-export function useCreateMealSelection() {
-  const queryClient =
-    useQueryClient();
-
-  return useMutation({
-    mutationFn: (
-      data: CreateMealSelectionPayload
-    ) =>
-      mealSelectionService.create(data),
-
-    onSuccess: () => {
-
-      queryClient.invalidateQueries({
-        queryKey: [
-          "meal-selections",
-          "mine",
-        ],
-      });
-
-    },
-  });
-}
-
-
-// =========================================
-// UPDATE MEAL SELECTION
-// =========================================
-
-export function useUpdateMealSelection() {
-  const queryClient =
-    useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      id,
-      foodOptionId,
-    }: {
-      id: string;
-      foodOptionId: string;
-    }) =>
-      mealSelectionService.update(
-        id,
-        {
-          foodOptionId,
-        }
-      ),
-
-    onSuccess: () => {
-
-      queryClient.invalidateQueries({
-        queryKey: [
-          "meal-selections",
-          "mine",
-        ],
-      });
-
-    },
   });
 }

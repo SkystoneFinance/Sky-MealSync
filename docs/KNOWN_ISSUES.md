@@ -11,7 +11,6 @@ Severity: 🔴 fix soon · 🟠 important · 🟡 minor / cleanup
 |---|---|---|---|
 | S4 | 🟡 | BE auth | No server-side token revocation. A stolen token works until it expires (90 days), unless the account is deactivated, which blocks refresh but not the current token. |
 | S5 | 🟠 | BE `staffAuth` | 4-digit PIN with **no rate limiting or lockout**, so it can be brute-forced. |
-| S6 | 🟠 | BE `mealSelection` PATCH/DELETE `/:id` | Doesn't check that the selection belongs to the caller, so any logged-in user can change anyone's selection by ID. |
 | S8 | 🟡 | FE `.env` | `.env` is committed and not in `.gitignore`. It only holds `VITE_API_URL` (not secret), but add `.env` to `.gitignore` before secrets land there. |
 | S9 | 🟡 | FE | JWT kept in `localStorage` (XSS exposure). Role is trusted from `localStorage` until `/me` returns. |
 | S10 | 🟡 | FE Navbar | Hotlinks an avatar image from a third-party site on every page load. |
@@ -34,6 +33,15 @@ Severity: 🔴 fix soon · 🟠 important · 🟡 minor / cleanup
 | F14 | 🟡 | FE QR download | `<a download>` is ignored for cross-origin URLs. |
 | F16 | 🟡 | FE food management | Errors only go to `console.error`. The image is a URL text field with no upload. |
 
+## Weekly meal planning: known limitations
+
+| # | Sev | Issue |
+|---|---|---|
+| P1 | 🟡 | After publishing, the chef can still change a dish's date or disable it in Food Management. Staff who chose it keep that choice and the summary still counts it (shown as "disabled"). Consider locking dishes of published weeks. |
+| P2 | 🟡 | SUPER_ADMIN can open Weekly Planning but not Food Management, so can't add dishes. |
+| P3 | 🟡 | The Food Management "Meal Demand" card still exists alongside the new summary. Consider removing it. |
+| P4 | 🟡 | The dev database contains test data: staff `DEVTEST01` and `DEVTEST02` and "(dev test)" dishes for 26–29 Oct. |
+
 ## Dead code / cleanup
 
 - **FE empty:** `src/lib/auth.ts`, `src/components/scan/scanResult.tsx`
@@ -49,6 +57,10 @@ Severity: 🔴 fix soon · 🟠 important · 🟡 minor / cleanup
 
 | Was | Fixed | Change |
 |---|---|---|
+| S6 Anyone could change or delete anyone's meal selection by ID | 2026-10-21 | `feature/weekly-meal-planning`: old write endpoints removed; selections are written only for the caller via `PUT /meal-plan` |
+| Invalid input returned 500 "Internal Server Error" instead of a 400 with the reason | 2026-10-21 | `feature/weekly-meal-planning`: `plugins/zod.ts` and error handler |
+| Link colours from Tailwind classes were ignored (global `a { color: inherit }` outside a layer) | 2026-10-21 | `feature/weekly-meal-planning`: `index.css` |
+| After a reload, staff were treated as admins (role missing from `/staff-auth/me`) | 2026-10-21 | `fix/api-auth-and-toasts` |
 | S1 No authentication on staff, attendance, dashboard and reports API routes | 2026-10-21 | `fix/api-auth-and-toasts`: staff management requires SUPER_ADMIN; attendance, dashboard and reports require ADMIN or SUPER_ADMIN |
 | F1 No `<Toaster />` mounted, so pop-up messages never showed | 2026-10-21 | `fix/api-auth-and-toasts` |
 | S2 Local development used the production database | 2026-10-20 | Neon dev child branch |

@@ -3,11 +3,13 @@ import type { FoodOption } from "./foodOption";
 export interface MealSelection {
   id: string;
   staffId: string;
-  foodOptionId: string;
+  // null when the staff member chose "No meal required"
+  foodOptionId: string | null;
+  noMeal: boolean;
   mealDate: string;
   createdAt: string;
   updatedAt: string;
-  foodOption: FoodOption;
+  foodOption: FoodOption | null;
 }
 
 export interface MealSelectionsResponse {

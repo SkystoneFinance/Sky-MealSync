@@ -1,618 +1,387 @@
-import {
-  useMemo,
-  useState,
-} from "react";
+import { useMemo, useState } from "react";
+
+import toast from "react-hot-toast";
 
 import {
-  Loader2,
+  Ban,
+  CalendarClock,
   Check,
-  ChevronLeft,
-  ChevronRight,
+  CheckCircle2,
+  Loader2,
+  Lock,
+  Store,
 } from "lucide-react";
 
 import {
-  useFoodOptionsByDate,
-} from "../../hooks/useFoodOptions";
+  useMyMealPlan,
+  useSubmitMealPlan,
+} from "../../hooks/useMealPlan";
+
+import type {
+  DayChoice,
+  PlanDay,
+} from "../../types/mealPlan";
 
 import {
-  useCreateMealSelection,
-  useMyMealSelections,
-  useUpdateMealSelection,
-} from "../../hooks/useMealSelection";
+  apiErrorMessage,
+  formatDay,
+  formatDeadline,
+  formatTimestamp,
+} from "../../utils/mealPlanDates";
 
-type DayKey =
-  | "Monday"
-  | "Tuesday"
-  | "Wednesday"
-  | "Thursday"
-  | "Friday";
+// Local choice per day: a food option id, or NO_MEAL
+const NO_MEAL = "no-meal";
 
-interface Day {
-  name: DayKey;
-  date: string;
-}
-
-const DAY_NAMES: DayKey[] = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-];
-
-function getMonday(date: Date) {
-  const result = new Date(date);
-
-  const day = result.getDay();
-
-  const difference =
-    day === 0
-      ? -6
-      : 1 - day;
-
-  result.setDate(
-    result.getDate() + difference
-  );
-
-  result.setHours(0, 0, 0, 0);
-
-  return result;
-}
-
-function formatDate(date: Date) {
-  const year = date.getFullYear();
-
-  const month = String(
-    date.getMonth() + 1
-  ).padStart(2, "0");
-
-  const day = String(
-    date.getDate()
-  ).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
+type Choices = Record<string, string>;
 
 export default function WeeklyMealPlan() {
-  const [weekOffset, setWeekOffset] =
-    useState(0);
+  const { data: plan, isLoading, isError } = useMyMealPlan();
+  const submitPlan = useSubmitMealPlan();
 
-  const [selectedMeals, setSelectedMeals] =
-    useState<Record<string, string>>({});
+  // Edits on top of what is saved on the server
+  const [edits, setEdits] = useState<Choices>({});
 
-  const [submitted, setSubmitted] =
-    useState(false);
+  const saved: Choices = useMemo(() => {
+    const result: Choices = {};
 
-  const today = useMemo(
-    () => new Date(),
-    []
-  );
+    for (const s of plan?.selections ?? []) {
+      result[s.date] = s.noMeal
+        ? NO_MEAL
+        : (s.foodOptionId ?? "");
+    }
 
-  const monday = useMemo(() => {
-    const date = getMonday(today);
+    return result;
+  }, [plan]);
 
-    date.setDate(
-      date.getDate() +
-        weekOffset * 7
-    );
-
-    return date;
-  }, [today, weekOffset]);
-
-  const days: Day[] = useMemo(() => {
-    return DAY_NAMES.map(
-      (name, index) => {
-        const date = new Date(monday);
-
-        date.setDate(
-          monday.getDate() + index
-        );
-
-        return {
-          name,
-          date: formatDate(date),
-        };
-      }
-    );
-  }, [monday]);
-
-  const {
-    data: selections = [],
-    isLoading: selectionsLoading,
-  } = useMyMealSelections();
-
-  const createSelection =
-    useCreateMealSelection();
-
-  const updateSelection =
-    useUpdateMealSelection();
-
-  const handleSelect = (
-    date: string,
-    foodOptionId: string
-  ) => {
-    setSelectedMeals(
-      (current) => ({
-        ...current,
-        [date]: foodOptionId,
-      })
-    );
-
-    // Allow another submission after
-    // making a new/change selection.
-    setSubmitted(false);
-  };
-
-  const getExistingSelection = (
-    date: string
-  ) => {
-    return selections.find(
-      (selection) =>
-        selection.mealDate.startsWith(date)
-    );
-  };
-
-  const getSelectedFood = (
-    date: string
-  ) => {
+  if (isLoading) {
     return (
-      selectedMeals[date] ||
-      getExistingSelection(date)
-        ?.foodOptionId ||
-      ""
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="animate-spin" size={30} />
+      </div>
     );
-  };
-
-  // =========================================
-  // CHECK IF DATE IS LOCKED
-  // =========================================
-
-  function isDateLocked(
-    dateString: string
-  ) {
-    const today = new Date();
-
-    today.setHours(
-      0,
-      0,
-      0,
-      0
-    );
-
-    const selectedDate = new Date(
-      `${dateString}T00:00:00`
-    );
-
-    selectedDate.setHours(
-      0,
-      0,
-      0,
-      0
-    );
-
-    // =========================================
-    // PAST DATES ARE ALWAYS LOCKED
-    // =========================================
-
-    if (selectedDate < today) {
-      return true;
-    }
-
-    // =========================================
-    // TODAY
-    // =========================================
-    // Today is open only when the staff member
-    // has not already selected a meal.
-    // =========================================
-
-    if (
-      selectedDate.getTime() ===
-      today.getTime()
-    ) {
-      const existingSelection =
-        getExistingSelection(dateString);
-
-      return Boolean(existingSelection);
-    }
-
-    // =========================================
-    // FUTURE DATES ARE OPEN
-    // =========================================
-
-    return false;
   }
 
-  // =========================================
-  // CHECK IF THERE IS SOMETHING TO SAVE
-  // =========================================
+  if (isError || !plan) {
+    return (
+      <div className="rounded-2xl bg-red-50 p-6 text-sm text-red-600">
+        Unable to load next week's menu. Please refresh the page.
+      </div>
+    );
+  }
 
-  const hasChanges = useMemo(() => {
-    return days.some((day) => {
-      const selectedFoodId =
-        selectedMeals[day.date];
+  const { week, days, submission } = plan;
+  const openDays = days.filter((d) => !d.closed);
+  const choices: Choices = { ...saved, ...edits };
 
-      if (!selectedFoodId) {
-        return false;
-      }
+  const missingDay = openDays.find((d) => !choices[d.date]);
+  const hasChanges = openDays.some(
+    (d) => choices[d.date] !== saved[d.date]
+  );
 
-      const existing =
-        getExistingSelection(day.date);
-
-      // New selection
-      if (!existing) {
-        return !isDateLocked(day.date);
-      }
-
-      // Changed future selection
-      return (
-        !isDateLocked(day.date) &&
-        existing.foodOptionId !==
-          selectedFoodId
+  const handleSubmit = () => {
+    if (missingDay) {
+      toast.error(
+        `Please choose a meal or "No meal required" for ${formatDay(missingDay.date)}.`
       );
-    });
-  }, [
-    days,
-    selectedMeals,
-    selections,
-  ]);
-
-  // =========================================
-  // SUBMIT MEAL SELECTIONS
-  // =========================================
-
-  const handleSubmit = async () => {
-    if (!hasChanges) {
       return;
     }
 
-    try {
-      for (const day of days) {
-        const foodOptionId =
-          selectedMeals[day.date];
+    const selections: DayChoice[] = openDays.map((d) =>
+      choices[d.date] === NO_MEAL
+        ? { date: d.date, noMeal: true }
+        : { date: d.date, foodOptionId: choices[d.date] }
+    );
 
-        const existing =
-          getExistingSelection(day.date);
-
-        // =========================================
-        // PAST / LOCKED DAYS
-        // =========================================
-
-        if (isDateLocked(day.date)) {
-          continue;
-        }
-
-        // =========================================
-        // NO NEW SELECTION FOR THIS DAY
-        // =========================================
-        // This is important.
-        //
-        // Staff do NOT have to select every day.
-        // An empty day is simply skipped.
-        // =========================================
-
-        if (!foodOptionId) {
-          continue;
-        }
-
-        // =========================================
-        // CREATE NEW SELECTION
-        // =========================================
-
-        if (!existing) {
-          await createSelection.mutateAsync({
-            foodOptionId,
-            mealDate: day.date,
-          });
-
-          continue;
-        }
-
-        // =========================================
-        // UPDATE EXISTING FUTURE SELECTION
-        // =========================================
-
-        if (
-          existing.foodOptionId !==
-          foodOptionId
-        ) {
-          await updateSelection.mutateAsync({
-            id: existing.id,
-            foodOptionId,
-          });
-        }
+    submitPlan.mutate(
+      { weekStart: week.weekStart, selections },
+      {
+        onSuccess: () => {
+          setEdits({});
+          toast.success(
+            submission
+              ? "Your meal plan has been updated."
+              : "Your meal plan has been submitted."
+          );
+        },
+        onError: (error) => {
+          toast.error(apiErrorMessage(error));
+        },
       }
-
-      setSubmitted(true);
-
-      // Clear local selections so the next
-      // interaction is based on fresh server data.
-      setSelectedMeals({});
-
-    } catch (error) {
-      console.error(
-        "Failed to submit meal plan:",
-        error
-      );
-
-      alert(
-        "Something went wrong while saving your meal plan."
-      );
-    }
+    );
   };
 
-  if (selectionsLoading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2
-          className="animate-spin"
-          size={30}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6">
       {/* HEADER */}
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Weekly Meal Plan
-          </h1>
+      <div>
+        <p className="text-sm font-medium text-slate-500">
+          Next week's meals
+        </p>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Select your meal for the days
-            you want to receive a meal.
+        <h1 className="mt-1 text-2xl font-bold text-gray-900">
+          Week of {formatDay(week.weekStart, { day: "numeric", month: "long" })}
+        </h1>
+
+        {week.isOpen && (
+          <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-[#B10F16]">
+            <CalendarClock size={16} />
+            Choose by {formatDeadline(week.deadline)}
           </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              setWeekOffset(
-                (value) =>
-                  value - 1
-              )
-            }
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          <div className="min-w-[150px] text-center text-sm font-semibold">
-            {monday.toLocaleDateString(
-              "en-US",
-              {
-                month: "short",
-                day: "numeric",
-              }
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              setWeekOffset(
-                (value) =>
-                  value + 1
-              )
-            }
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
+        )}
       </div>
+
+      {/* STATUS */}
+
+      <PlanStatus
+        isPublished={week.isPublished}
+        isOpen={week.isOpen}
+        submittedAt={submission?.submittedAt}
+        updatedAt={submission?.updatedAt}
+      />
 
       {/* DAYS */}
 
-      <div className="space-y-6">
-        {days.map((day) => (
-          <DayMealSelector
-            key={day.date}
-            day={day}
-            selectedFoodId={getSelectedFood(
-              day.date
-            )}
-            onSelect={(foodId) =>
-              handleSelect(
-                day.date,
-                foodId
-              )
-            }
-            locked={isDateLocked(
-              day.date
-            )}
-          />
-        ))}
-      </div>
+      {week.isPublished && (
+        <div className="space-y-6">
+          {days.map((day) => (
+            <DayCard
+              key={day.date}
+              day={day}
+              choice={choices[day.date]}
+              readOnly={!week.isOpen}
+              onChoose={(value) =>
+                setEdits((current) => ({
+                  ...current,
+                  [day.date]: value,
+                }))
+              }
+            />
+          ))}
+        </div>
+      )}
 
       {/* SUBMIT */}
 
-      <div className="flex justify-end border-t border-gray-200 pt-6">
-        <button
-          type="button"
-          disabled={
-            !hasChanges ||
-            createSelection.isPending ||
-            updateSelection.isPending ||
-            submitted
-          }
-          onClick={handleSubmit}
-          className="flex items-center gap-2 rounded-xl bg-[#B10F16] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#920c12] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {createSelection.isPending ||
-          updateSelection.isPending ? (
-            <>
-              <Loader2
-                size={18}
-                className="animate-spin"
-              />
-
-              Saving...
-            </>
-          ) : submitted ? (
-            <>
-              <Check size={18} />
-
-              Meal Plan Saved
-            </>
-          ) : (
-            "Submit Weekly Plan"
+      {week.isOpen && (
+        <div className="sticky bottom-4 flex flex-col items-end gap-2 border-t border-gray-200 bg-[#f5f5f5]/90 pt-4 backdrop-blur">
+          {missingDay && (
+            <p className="text-xs text-slate-500">
+              {openDays.filter((d) => !choices[d.date]).length} day(s) left to choose
+            </p>
           )}
-        </button>
-      </div>
+
+          <button
+            type="button"
+            disabled={
+              submitPlan.isPending ||
+              (Boolean(submission) && !hasChanges)
+            }
+            onClick={handleSubmit}
+            className="flex items-center gap-2 rounded-xl bg-[#B10F16] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#920c12] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitPlan.isPending ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Saving...
+              </>
+            ) : submission && !hasChanges ? (
+              <>
+                <Check size={18} />
+                Plan submitted
+              </>
+            ) : submission ? (
+              "Update my plan"
+            ) : (
+              "Submit my plan"
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-function DayMealSelector({
-  day,
-  selectedFoodId,
-  onSelect,
-  locked,
+function PlanStatus({
+  isPublished,
+  isOpen,
+  submittedAt,
+  updatedAt,
 }: {
-  day: Day;
-  selectedFoodId: string;
-  onSelect: (
-    foodOptionId: string
-  ) => void;
-  locked: boolean;
+  isPublished: boolean;
+  isOpen: boolean;
+  submittedAt?: string;
+  updatedAt?: string;
 }) {
-  const {
-    data: foodOptions = [],
-    isLoading,
-    isError,
-  } = useFoodOptionsByDate(day.date);
+  if (!isPublished) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+        The chef hasn't published next week's menu yet. It's usually
+        ready by Wednesday evening; check back then.
+      </div>
+    );
+  }
 
-  return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      {/* DAY HEADER */}
+  if (submittedAt) {
+    const edited =
+      updatedAt &&
+      new Date(updatedAt).getTime() -
+        new Date(submittedAt).getTime() >
+        60 * 1000;
 
-      <div className="mb-5 flex items-center justify-between">
+    return (
+      <div className="flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-5 text-sm text-green-800">
+        <CheckCircle2 size={20} className="mt-0.5 shrink-0" />
+
         <div>
-          <h2 className="text-lg font-bold text-gray-900">
-            {day.name}
-          </h2>
+          <p className="font-semibold">
+            Submitted {formatTimestamp(submittedAt)}
+            {edited && updatedAt
+              ? ` · last changed ${formatTimestamp(updatedAt)}`
+              : ""}
+          </p>
 
-          <p className="text-sm text-gray-500">
-            {new Date(
-              `${day.date}T00:00:00`
-            ).toLocaleDateString(
-              "en-US",
-              {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              }
-            )}
+          <p className="mt-1">
+            {isOpen
+              ? "You can still change your choices until the deadline."
+              : "Selection has closed. These are your meals for next week."}
           </p>
         </div>
+      </div>
+    );
+  }
 
-        {locked ? (
-          <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-            🔒 Locked
-          </div>
-        ) : selectedFoodId ? (
-          <div className="flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+  if (!isOpen) {
+    return (
+      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
+        <Lock size={20} className="mt-0.5 shrink-0" />
+
+        <p>
+          Selection for next week has closed. You didn't submit a plan,
+          so no meals are booked for you next week.
+        </p>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function DayCard({
+  day,
+  choice,
+  readOnly,
+  onChoose,
+}: {
+  day: PlanDay;
+  choice?: string;
+  readOnly: boolean;
+  onChoose: (value: string) => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-lg font-bold text-gray-900">
+          {formatDay(day.date)}
+        </h2>
+
+        {day.closed ? (
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            Kitchen closed
+          </span>
+        ) : choice ? (
+          <span className="flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
             <Check size={14} />
-            Selected
-          </div>
+            Chosen
+          </span>
         ) : null}
       </div>
 
-      {/* FOOD OPTIONS */}
-
-      {isLoading ? (
-        <div className="flex h-32 items-center justify-center">
-          <Loader2
-            className="animate-spin text-gray-400"
-            size={24}
-          />
-        </div>
-      ) : isError ? (
-        <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600">
-          Unable to load food options
-          for {day.name}.
-        </div>
-      ) : foodOptions.length === 0 ? (
-        <div className="rounded-xl bg-gray-50 p-6 text-center text-sm text-gray-500">
-          No food options available
-          for this day.
+      {day.closed ? (
+        <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-6 text-sm text-gray-500">
+          <Store size={18} />
+          No meals are served on this day.
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {foodOptions.map(
-            (food) => {
-              const selected =
-                selectedFoodId ===
-                food.id;
+          {day.options.map((food) => (
+            <ChoiceTile
+              key={food.id}
+              selected={choice === food.id}
+              disabled={readOnly}
+              onClick={() => onChoose(food.id)}
+            >
+              <div className="relative h-40 overflow-hidden">
+                <img
+                  src={food.image}
+                  alt={food.name}
+                  className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                />
+              </div>
 
-              return (
-                <button
-                  key={food.id}
-                  type="button"
-                  disabled={locked}
-                  onClick={() => {
-                    if (!locked) {
-                      onSelect(food.id);
-                    }
-                  }}
-                  className={`group overflow-hidden rounded-xl border-2 text-left transition ${
-                    selected
-                      ? "border-[#B10F16] bg-red-50"
-                      : locked
-                        ? "cursor-not-allowed border-gray-100 bg-gray-50 opacity-70"
-                        : "border-gray-100 bg-white hover:border-gray-300"
-                  }`}
-                >
-                  <div className="relative h-40 overflow-hidden">
-                    <img
-                      src={food.image}
-                      alt={food.name}
-                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                    />
+              <div className="p-4">
+                <h3 className="font-semibold text-gray-900">
+                  {food.name}
+                </h3>
+              </div>
+            </ChoiceTile>
+          ))}
 
-                    {selected && (
-                      <div className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#B10F16] text-white shadow">
-                        <Check
-                          size={18}
-                        />
-                      </div>
-                    )}
-                  </div>
+          <ChoiceTile
+            selected={choice === NO_MEAL}
+            disabled={readOnly}
+            onClick={() => onChoose(NO_MEAL)}
+          >
+            <div className="flex h-full min-h-[120px] flex-col items-center justify-center gap-2 p-4 text-center">
+              <Ban size={28} className="text-slate-400" />
 
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900">
-                      {food.name}
-                    </h3>
+              <h3 className="font-semibold text-gray-900">
+                No meal required
+              </h3>
 
-                    <p
-                      className={`mt-1 text-xs font-medium ${
-                        selected
-                          ? "text-[#B10F16]"
-                          : locked
-                            ? "text-slate-400"
-                            : "text-gray-500"
-                      }`}
-                    >
-                      {locked
-                        ? selected
-                          ? "Selected for this day"
-                          : "Selection closed"
-                        : selected
-                          ? "Selected"
-                          : "Select this meal"}
-                    </p>
-                  </div>
-                </button>
-              );
-            }
-          )}
+              <p className="text-xs text-gray-500">
+                I won't be eating on this day
+              </p>
+            </div>
+          </ChoiceTile>
         </div>
       )}
     </section>
+  );
+}
+
+function ChoiceTile({
+  selected,
+  disabled,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`group relative overflow-hidden rounded-xl border-2 text-left transition ${
+        selected
+          ? "border-[#B10F16] bg-red-50"
+          : disabled
+            ? "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
+            : "border-gray-100 bg-white hover:border-gray-300"
+      }`}
+    >
+      {children}
+
+      {selected && (
+        <div className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#B10F16] text-white shadow">
+          <Check size={18} />
+        </div>
+      )}
+    </button>
   );
 }

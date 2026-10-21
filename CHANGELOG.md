@@ -9,6 +9,17 @@ Sections: **Added** · **Changed** · **Fixed** · **Removed** · **Security**
 
 ## [Unreleased]
 
+### Added
+- **Weekly meal planning.** Staff choose next week's meals (or "No meal required") on Select Meal, prompted by a prominent banner on their home page once the menu is published. A new **Weekly Planning** page (chef and SUPER_ADMIN) handles closed days, publishing, a copyable WhatsApp announcement, and the Meal Preparation Summary with Excel export. Dashboard banners remind the chef to publish (from Tuesday) and announce when the week is confirmed.
+
+### Changed
+- The staff dashboard shows next week's plan status and deadline instead of "X / 5 selected this week". Today's meal shows "No meal today" when chosen.
+- Removed the old per-day selection page and its create/update calls.
+
+### Fixed
+- Tailwind text colours on links were overridden by a global CSS rule.
+- After a reload, staff were treated as admins (now on `fix/api-auth-and-toasts`).
+
 ### Fixed
 - Pop-up (toast) messages now appear: login errors, scan results, staff import results. The `<Toaster />` was never mounted.
 

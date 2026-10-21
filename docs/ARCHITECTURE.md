@@ -38,11 +38,11 @@ by a SUPER_ADMIN; staff then activate their own login.
 ## The meal lifecycle
 
 ```
- 1. ONBOARD        2. MENU             3. SELECT            4. SERVE (scan)                   5. REPORT
- SUPER_ADMIN       ADMIN (chef)        STAFF                ADMIN at the counter              SUPER_ADMIN
- adds staff   ──▶  adds dishes    ──▶  picks one dish  ──▶  scans staff QR ─▶ preview ─▶  ──▶ dashboard, history,
- (form/Excel)      per date            per weekday          "Mark as eaten" = Attendance row   Excel export
- → QR generated                        (locks on the day)   (max 3 servings/day)
+ 1. ONBOARD        2. MENU               3. SELECT               4. SUMMARY       5. SERVE (scan)                 6. REPORT
+ SUPER_ADMIN       ADMIN (chef)          STAFF                   ADMIN (chef)     ADMIN at the counter            SUPER_ADMIN
+ adds staff   ──▶  adds dishes for  ──▶  choose dish or     ──▶  confirmed  ──▶   scans QR ─▶ preview ─▶     ──▶  dashboard, history,
+ (form/Excel)      next week,            "No meal" per day       Thu 19:00;       "Mark as eaten" = Attendance    Excel export
+ → QR generated    publishes by Wed 17   by Thu 17:00            shop Friday      (max 3 servings/day)
 ```
 
 ### 1. Staff onboarding
@@ -63,23 +63,29 @@ by a SUPER_ADMIN; staff then activate their own login.
   visible, but at most once a day (`src/lib/session.ts`). Anyone who opens the app at least every 90 days stays logged in.
   A 401 from any API call returns the user to the login screen. **Log out** is in the sidebar.
 
-### 3. Menu setup (chef)
-- ADMIN opens **Food Management** (`/food-management`) and creates **food options, each tied to one date**
-  (name, image URL, date). Options can be disabled, edited or deleted.
-- The same page shows **Meal Demand** for a chosen date: how many staff picked each dish, so the kitchen knows what to cook.
+### 3. Menu setup and publishing (chef), by Wednesday 17:00
+- ADMIN creates **food options, each tied to one date**, in **Food Management** (`/food-management`).
+- On **Weekly Planning** (`/weekly-planning`, ADMIN and SUPER_ADMIN), the chef reviews next week, ticks any
+  **Kitchen closed** days and presses **Publish** → `POST /menu-weeks/:weekStart/publish`. That creates a `MenuWeek` row
+  with `publishedAt`. The page then offers a copyable WhatsApp announcement.
+- The chef dashboard shows a reminder banner from Tuesday until the menu is published (red once overdue).
 
-### 4. Weekly meal selection (staff)
-- Staff open **Select Meal** (`/meal-plan`), which shows Monday–Friday of a week with the food options for each day
-  (`GET /food-options/date`).
-- They pick one dish per day and submit. Each day becomes one `MealSelection` (create or update).
-- **Locking:** a day can't be changed once it is today or in the past. Exception: on Monday, Monday itself is still open.
-  This is enforced in both the UI and the API.
-- The staff dashboard shows today's meal and progress ("X / 5 selected this week").
+### 4. Weekly meal selection (staff), by Thursday 17:00
+- Once published, the staff home page shows a prominent **"Next week's menu is ready"** banner (`GET /meal-plan`).
+- On **Select Meal** (`/meal-plan`) staff pick a dish **or "No meal required"** for each open day of **next week** and
+  submit → `PUT /meal-plan`. That replaces their `MealSelection` rows for the week and upserts a `WeeklySubmission`
+  (first submission time + last edit).
+- Edits are allowed until the **hidden close at Thursday 19:00**; the UI only ever shows the 17:00 deadline.
+- The rules and times live in `mealSync/src/modules/mealPlan/schedule.ts` (Africa/Lagos).
+
+### 4b. Meal Preparation Summary
+- After the close, the chef dashboard shows "Week confirmed" with a link to the summary on Weekly Planning
+  (`GET /menu-weeks/:weekStart/summary`, Excel via `/summary/export`). See [PRD 4.4](PRD.md).
 
 ### 5. Serving (scan)
 - At the counter an ADMIN opens **Scan** (`/scan`) on a phone or laptop with a camera.
 - Scanning a QR sends `POST /attendance/scan` with the `qrCodeId`. This is a **preview only**. The API checks the staff
-  member is active, has **selected a meal for today**, and hasn't hit the **3-servings-per-day** limit, then returns the
+  member is active, has **selected a meal for today** (not "No meal required"), and hasn't hit the **3-servings-per-day** limit, then returns the
   person, their dish and their remaining servings.
 - The person serving clicks **Mark as Eaten** → `POST /attendance/serve` creates an `Attendance` row inside a transaction and
   emits the Socket.IO event `attendance:new`. The frontend does not listen for it yet.
@@ -110,7 +116,8 @@ src/
   hooks/use*.ts            React Query wrappers around services
   types/                   API/DTO types
   components/<feature>/    screens: auth, dashboard, scan, attendance, history,
-                           stafff (staff mgmt + staff dashboard + profile), foodManagement, mealplan
+                           stafff (staff mgmt + staff dashboard + profile), foodManagement,
+                           mealplan (staff weekly plan + banner), mealPlanning (chef weekly planning + banner)
 ```
 
 Pattern for a feature: `component → hook (useQuery/useMutation) → service (axios) → backend route`.

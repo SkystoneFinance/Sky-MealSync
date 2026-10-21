@@ -16,6 +16,7 @@ import Scan from "../../components/scan/scan";
 import MyProfile from "../../components/stafff/MyProfile";
 import WeeklyMealPlan from "../../components/mealplan/weeklyplan";
 import FoodManagement from "../../components/foodManagement/FoodManagement";
+import WeeklyPlanning from "../../components/mealPlanning/WeeklyPlanning";
 
 
 import { useAuth } from "../../hooks/useAuth";
@@ -55,6 +56,7 @@ export default function AppRoutes() {
             }
           >
             <Route path="scan" element={<Scan />} />
+            <Route path="weekly-planning" element={<WeeklyPlanning />} />
           </Route>
 
           {/* SUPER ADMIN */}

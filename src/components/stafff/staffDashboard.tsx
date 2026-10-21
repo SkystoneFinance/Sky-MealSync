@@ -6,8 +6,16 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 
+import { Link } from "react-router-dom";
+
 import { useAuth } from "../../hooks/useAuth";
 import { useMyMealSelections } from "../../hooks/useMealSelection";
+import { useMyMealPlan } from "../../hooks/useMealPlan";
+import MealPlanBanner from "../mealplan/MealPlanBanner";
+import {
+  formatDay,
+  formatDeadline,
+} from "../../utils/mealPlanDates";
 import type { StaffUser } from "../../types/auth";
 
 export default function StaffDashboard() {
@@ -17,6 +25,8 @@ export default function StaffDashboard() {
     data: selections = [],
     isLoading,
   } = useMyMealSelections();
+
+  const { data: plan } = useMyMealPlan();
 
   const staff: StaffUser | null =
     user && user.role === "USER" && "staffId" in user
@@ -53,45 +63,25 @@ export default function StaffDashboard() {
   );
 
   // ==================================
-  // CURRENT WEEK
+  // NEXT WEEK'S PLAN
   // ==================================
 
-  const monday = new Date(today);
+  const nextWeekOf = plan
+    ? formatDay(plan.week.weekStart, {
+        day: "numeric",
+        month: "short",
+      })
+    : "";
 
-  const day = monday.getDay();
-
-  const difference =
-    day === 0 ? -6 : 1 - day;
-
-  monday.setDate(
-    monday.getDate() + difference
-  );
-
-  monday.setHours(0, 0, 0, 0);
-
-  const friday = new Date(monday);
-
-  friday.setDate(
-    monday.getDate() + 4
-  );
-
-  const currentWeekSelections =
-    selections.filter((selection) => {
-
-      const mealDate =
-        new Date(selection.mealDate);
-
-      return (
-        mealDate >= monday &&
-        mealDate <= friday
-      );
-    });
-
-  const selectedCount =
-    currentWeekSelections.length;
-
-  const completed =
-    selectedCount === 5;
+  const nextWeekStatus = !plan
+    ? "Loading..."
+    : plan.submission
+      ? "Submitted"
+      : !plan.week.isPublished
+        ? "Menu not out yet"
+        : plan.week.isOpen
+          ? "Not submitted"
+          : "Missed";
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
@@ -99,6 +89,9 @@ export default function StaffDashboard() {
       {/* ================================= */}
       {/* HEADER */}
       {/* ================================= */}
+
+      {/* Prompt to choose next week's meals */}
+      <MealPlanBanner />
 
       <div>
         <p className="text-sm font-medium text-slate-500">
@@ -181,8 +174,10 @@ export default function StaffDashboard() {
           <h3 className="mt-1 text-lg font-bold text-slate-900">
             {isLoading
               ? "Loading..."
-              : todaySelection?.foodOption?.name ||
-                "Not selected"}
+              : todaySelection?.noMeal
+                ? "No meal today"
+                : todaySelection?.foodOption?.name ||
+                  "Not selected"}
           </h3>
 
         </div>
@@ -199,17 +194,17 @@ export default function StaffDashboard() {
             </div>
 
             <span className="text-xs font-medium text-slate-400">
-              This Week
+              Week of {nextWeekOf}
             </span>
 
           </div>
 
           <p className="mt-5 text-sm text-slate-500">
-            Meals Selected
+            Next Week's Plan
           </p>
 
           <h3 className="mt-1 text-lg font-bold text-slate-900">
-            {selectedCount} / 5
+            {nextWeekStatus}
           </h3>
 
         </div>
@@ -232,13 +227,13 @@ export default function StaffDashboard() {
           </div>
 
           <p className="mt-5 text-sm text-slate-500">
-            Meal Plan
+            Deadline
           </p>
 
           <h3 className="mt-1 text-lg font-bold text-slate-900">
-            {completed
-              ? "Completed"
-              : "In Progress"}
+            {plan?.week.isOpen
+              ? formatDeadline(plan.week.deadline)
+              : "—"}
           </h3>
 
         </div>
@@ -270,23 +265,21 @@ export default function StaffDashboard() {
             </div>
 
             <p className="mt-2 text-sm text-slate-500">
-              {completed
-                ? "Your meal plan is complete for this week."
-                : `You have selected ${selectedCount} out of 5 meals.`}
+              Meals are chosen a week ahead so the kitchen can shop on Friday.
             </p>
 
           </div>
 
-          <a
-            href="/meal-plan"
+          <Link
+            to="/meal-plan"
             className="flex items-center justify-center gap-2 rounded-xl bg-[#B10F16] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#920C12]"
           >
-            {completed
+            {plan?.submission
               ? "View Meal Plan"
               : "Select Meal"}
 
             <ChevronRight size={17} />
-          </a>
+          </Link>
 
         </div>
 
