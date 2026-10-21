@@ -19,6 +19,36 @@ const FOOD_OPTIONS_KEY = ["food-options"] as const;
 
 
 // ==========================================
+// OUR OWN DISH PHOTOS
+// ==========================================
+
+export function useDishPhotoStatus() {
+  return useQuery({
+    queryKey: [...FOOD_OPTIONS_KEY, "photo-status"],
+    queryFn: foodOptionService.getPhotoStatus,
+  });
+}
+
+export function useUploadDishPhoto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, photo }: { id: string; photo: Blob }) =>
+      foodOptionService.uploadPhoto(id, photo),
+
+    // The photo replaces the image on every dish with this name
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: FOOD_OPTIONS_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["meal-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["meal-selections"] }),
+      ]);
+    },
+  });
+}
+
+
+// ==========================================
 // GET ALL FOOD OPTIONS
 // ==========================================
 

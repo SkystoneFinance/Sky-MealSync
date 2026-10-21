@@ -1,231 +1,38 @@
-import {
-UserPlus,
-ChevronDown,
-Upload,
-Plus
-} from "lucide-react";
+import { Upload, UserPlus } from "lucide-react";
 
+import { Button, PageHeader } from "../ui";
 
-import {
-motion
-} from "framer-motion";
-
-
-import {
-useState
-} from "react";
-
-
-
-interface Props{
-
-onCreate:()=>void;
-
-onImport:()=>void;
-
+interface Props {
+  total?: number;
+  active?: number;
+  onCreate: () => void;
+  onImport: () => void;
 }
 
-
-
-export default function StaffHeader({
-
-onCreate,
-
-onImport
-
-}:Props){
-
-
-const [open,setOpen]=useState(false);
-
-
-
-return (
-
-
-<motion.div
-
-initial={{
-opacity:0,
-y:15
-}}
-
-animate={{
-opacity:1,
-y:0
-}}
-
-className="
-flex
-items-center
-justify-between
-"
-
->
-
-
-<div>
-
-
-<h1 className="
-text-4xl
-font-bold
-">
-
-Staff Management
-
-</h1>
-
-
-<p className="
-text-gray-500
-mt-2
-">
-
-Manage staff members and QR attendance
-
-</p>
-
-
-</div>
-
-
-
-
-
-<div className="relative">
-
-
-<button
-
-onClick={()=>setOpen(!open)}
-
-className="
-flex
-items-center
-gap-2
-rounded-2xl
-bg-[#B10F16]
-px-5
-py-3
-text-white
-font-semibold
-shadow-lg
-hover:scale-105
-transition
-"
-
->
-
-
-<UserPlus size={20}/>
-
-Add Staff
-
-
-<ChevronDown size={18}/>
-
-
-</button>
-
-
-
-
-
-{
-open &&
-
-<div
-
-className="
-absolute
-right-0
-mt-3
-w-52
-rounded-2xl
-bg-white
-shadow-xl
-border
-p-2
-z-50
-"
-
->
-
-
-
-<button
-
-onClick={()=>{
-
-setOpen(false);
-
-onCreate();
-
-}}
-
-className="
-flex
-w-full
-items-center
-gap-3
-rounded-xl
-px-4
-py-3
-hover:bg-gray-100
-"
-
->
-
-<Plus size={18}/>
-
-Create Staff
-
-</button>
-
-
-
-
-
-<button
-
-onClick={()=>{
-
-setOpen(false);
-
-onImport();
-
-}}
-
-className="
-flex
-w-full
-items-center
-gap-3
-rounded-xl
-px-4
-py-3
-hover:bg-gray-100
-"
-
->
-
-<Upload size={18}/>
-
-Import Excel
-
-</button>
-
-
-
-</div>
-
-}
-
-
-
-</div>
-</motion.div>
-)
-
+export default function StaffHeader({ total, active, onCreate, onImport }: Props) {
+  const description =
+    total === undefined
+      ? "Manage who can sign in and be served meals."
+      : `${total} ${total === 1 ? "person" : "people"} · ${active ?? 0} active`;
+
+  return (
+    <PageHeader
+      title="Staff"
+      description={description}
+      actions={
+        <>
+          <Button
+            variant="secondary"
+            icon={<Upload size={16} />}
+            onClick={onImport}
+          >
+            Import from Excel
+          </Button>
+          <Button icon={<UserPlus size={16} />} onClick={onCreate}>
+            Add staff
+          </Button>
+        </>
+      }
+    />
+  );
 }

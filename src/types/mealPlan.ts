@@ -28,13 +28,28 @@ export interface StaffMealPlan {
     deadline: string;
     isPublished: boolean;
     isOpen: boolean;
+    // Not published through weekly planning (older weeks)
+    isLegacy: boolean;
+    // Next week or the week after
+    isPlanningWeek: boolean;
+    isCurrentWeek: boolean;
   };
   days: PlanDay[];
-  selections: Required<DayChoice>[];
+  selections: (Required<DayChoice> & {
+    dish: { name: string; image: string } | null;
+  })[];
   submission: {
     submittedAt: string;
     updatedAt: string;
   } | null;
+}
+
+export interface StaffWeekStatus {
+  weekStart: string;
+  deadline: string;
+  isPublished: boolean;
+  isOpen: boolean;
+  submittedAt: string | null;
 }
 
 // ---------- chef / admin ----------
@@ -57,6 +72,7 @@ export interface MenuWeek {
   deadline: string;
   hardClose: string;
   isClosed: boolean;
+  isPlanningWeek: boolean;
   isPublished: boolean;
   publishedAt: string | null;
   publishedLate: boolean;
@@ -78,6 +94,8 @@ export interface MealPrepSummary {
   isPublished: boolean;
   publishedAt: string | null;
   isConfirmed: boolean;
+  // Chosen day by day before weekly planning existed
+  isLegacy: boolean;
   totals: {
     activeStaff: number;
     submitted: number;

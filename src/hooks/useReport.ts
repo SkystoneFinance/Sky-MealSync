@@ -1,35 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { reportService } from "../services/report.service";
+import type { ReportPeriod } from "../types/report";
 
-export function useTodayReport() {
+// Only the selected period is fetched; switching periods keeps the previous
+// numbers on screen until the new ones arrive.
+export function useReportSummary(period: ReportPeriod) {
   return useQuery({
-    queryKey: ["today-report"],
-    queryFn: reportService.today,
+    queryKey: ["reports", "summary", period],
+    queryFn: () => reportService.summary(period),
+    placeholderData: keepPreviousData,
   });
 }
 
-export function useWeeklyReport() {
+export function useStaffSummary(period: ReportPeriod) {
   return useQuery({
-    queryKey: ["weekly-report"],
-    queryFn: reportService.weekly,
-  });
-}
-
-export function useMonthlyReport() {
-  return useQuery({
-    queryKey: ["monthly-report"],
-    queryFn: reportService.monthly,
-  });
-}
-
-export function useStaffSummary(
-  period: string,
-) {
-  return useQuery({
-    queryKey: ["staff-summary", period],
-
-    queryFn: () =>
-      reportService.staffSummary(period),
+    queryKey: ["reports", "staff-summary", period],
+    queryFn: () => reportService.staffSummary(period),
+    placeholderData: keepPreviousData,
   });
 }

@@ -6,6 +6,7 @@ import type {
   MealPrepSummary,
   MenuWeek,
   StaffMealPlan,
+  StaffWeekStatus,
 } from "../types/mealPlan";
 
 interface Envelope<T> {
@@ -19,9 +20,21 @@ export const mealPlanService = {
   // STAFF
   // ==========================================
 
-  async getMine() {
-    const res =
-      await api.get<Envelope<StaffMealPlan>>("/meal-plan");
+  // Default: next week
+  async getMine(weekStart?: string) {
+    const res = await api.get<Envelope<StaffMealPlan>>(
+      "/meal-plan",
+      { params: weekStart ? { weekStart } : undefined }
+    );
+
+    return res.data.data;
+  },
+
+  // Next week and the week after
+  async getMyStatus() {
+    const res = await api.get<Envelope<StaffWeekStatus[]>>(
+      "/meal-plan/status"
+    );
 
     return res.data.data;
   },

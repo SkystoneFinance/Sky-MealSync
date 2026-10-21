@@ -18,7 +18,14 @@ ReactDOM.createRoot(
         <AppRoutes />
 
         {/* Renders every toast() call in the app */}
-        <Toaster position="top-center" />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            className: "!rounded-xl !text-sm !font-medium !text-zinc-900 !shadow-pop",
+            success: { iconTheme: { primary: "#047857", secondary: "#fff" } },
+            error: { iconTheme: { primary: "#b10f16", secondary: "#fff" } },
+          }}
+        />
       </AuthProvider>
     </QueryProvider>
   </BrowserRouter>

@@ -1,121 +1,169 @@
-import { Pencil, Download, Trash2 } from "lucide-react";
-import type { Staff } from "../../types/staff";
+import { Pencil, QrCode, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
+
+import { Avatar, Badge, Button, Table, Td, Th } from "../ui";
 import { useDeleteStaff } from "../../hooks/useStaff";
+import type { Staff } from "../../types/staff";
+import { apiErrorMessage } from "../../utils/mealPlanDates";
+
+import { downloadStaffQr, staffFullName } from "./staffForm";
 
 interface Props {
   staff: Staff[];
+  onEdit: (staff: Staff) => void;
 }
 
-export default function StaffTable({ staff }: Props) {
+function StatusBadge({ active }: { active: boolean }) {
+  return active ? (
+    <Badge tone="success">Active</Badge>
+  ) : (
+    <Badge tone="neutral">Inactive</Badge>
+  );
+}
 
-    const { mutate: deleteStaff } = useDeleteStaff();
+function RowActions({
+  person,
+  onEdit,
+  onDelete,
+  deleting,
+}: {
+  person: Staff;
+  onEdit: () => void;
+  onDelete: () => void;
+  deleting: boolean;
+}) {
+  const name = staffFullName(person);
+
   return (
-    <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr className="border-b text-left text-sm font-semibold text-gray-600">
-              <th className="px-6 py-4">Name</th>
-              <th className="px-6 py-4">Staff Number</th>
-              <th className="px-6 py-4">Department</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-center">Actions</th>
+    <div className="flex items-center justify-end gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={`Edit ${name}`}
+        title="Edit"
+        onClick={onEdit}
+        icon={<Pencil size={16} />}
+      />
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={`Download QR code for ${name}`}
+        title={person.qrImage ? "Download QR code" : "No QR code available"}
+        disabled={!person.qrImage}
+        onClick={() => downloadStaffQr(person)}
+        icon={<QrCode size={16} />}
+      />
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={`Delete ${name}`}
+        title="Delete"
+        loading={deleting}
+        onClick={onDelete}
+        className="text-zinc-500 hover:bg-red-50 hover:text-red-700"
+        icon={<Trash2 size={16} />}
+      />
+    </div>
+  );
+}
+
+export default function StaffTable({ staff, onEdit }: Props) {
+  const { mutate: deleteStaff, isPending, variables } = useDeleteStaff();
+
+  function confirmDelete(person: Staff) {
+    const name = staffFullName(person);
+    const ok = window.confirm(
+      `Delete ${name} (${person.staffNumber})?\n\n` +
+        "This permanently deletes their meal selections and history too. " +
+        "If they've just left, consider deactivating them instead (Edit → Active) to keep their records."
+    );
+    if (!ok) return;
+
+    deleteStaff(person.id, {
+      onSuccess: () => toast.success(`${name} deleted.`),
+      onError: (error) =>
+        toast.error(apiErrorMessage(error, `Couldn't delete ${name}.`)),
+    });
+  }
+
+  const isDeleting = (id: string) => isPending && variables === id;
+
+  return (
+    <>
+      {/* Mobile: stacked list */}
+      <ul className="divide-y divide-zinc-100 md:hidden">
+        {staff.map((person) => (
+          <li key={person.id} className="flex items-start gap-3 px-4 py-3">
+            <Avatar name={staffFullName(person)} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="truncate font-medium text-zinc-900">
+                  {staffFullName(person)}
+                </p>
+              </div>
+              <p className="tabular truncate text-sm text-zinc-500">
+                {person.staffNumber} · {person.department}
+              </p>
+              <div className="mt-1.5">
+                <StatusBadge active={person.isActive} />
+              </div>
+            </div>
+            <RowActions
+              person={person}
+              onEdit={() => onEdit(person)}
+              onDelete={() => confirmDelete(person)}
+              deleting={isDeleting(person.id)}
+            />
+          </li>
+        ))}
+      </ul>
+
+      {/* Desktop: table */}
+      <div className="hidden md:block">
+        <Table>
+          <thead>
+            <tr>
+              <Th>Name</Th>
+              <Th>Staff number</Th>
+              <Th>Department</Th>
+              <Th>Status</Th>
+              <Th className="text-right">
+                <span className="sr-only">Actions</span>
+              </Th>
             </tr>
           </thead>
-
           <tbody>
-            {staff.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="py-10 text-center text-gray-500"
-                >
-                  No staff members found.
-                </td>
-              </tr>
-            ) : (
-              
-              staff.map((person) => (
-                <tr
-                  key={person.id}
-                  className="border-b transition-colors hover:bg-gray-50 last:border-none"
-                >
-                  <td className="px-6 py-5">
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        {person.firstName} {person.lastName}
-                      </p>
-
-                      <p className="text-sm text-gray-500">
-                        ID: {person.id.slice(0, 8)}...
-                      </p>
-                    </div>
-                  </td>
-
-                  <td className="px-6 py-5 font-medium">
-                    {person.staffNumber}
-                  </td>
-
-                  <td className="px-6 py-5">
-                    {person.department}
-                  </td>
-
-                  <td className="px-6 py-5">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        person.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {person.isActive ? "Active" : "Inactive"}
+            {staff.map((person) => (
+              <tr
+                key={person.id}
+                className="transition-colors hover:bg-zinc-50/60 [&:last-child>td]:border-b-0"
+              >
+                <Td>
+                  <div className="flex items-center gap-3">
+                    <Avatar name={staffFullName(person)} size="sm" />
+                    <span className="font-medium text-zinc-900">
+                      {staffFullName(person)}
                     </span>
-                  </td>
-                  <td className="px-6 py-5">
-  <div className="flex items-center justify-center gap-2">
-
-    <button
-      className="flex items-center gap-2 rounded-xl bg-blue-100 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-200"
-    >
-      <Pencil size={16} />
-      Edit
-    </button>
-
-    <a
-      href={person.qrImage}
-      download={`${person.staffNumber}-QR.png`}
-      target="_blank"
-      rel="noreferrer"
-      className="flex items-center gap-2 rounded-xl bg-[#B10F16]/10 px-3 py-2 text-sm font-medium text-[#B10F16] transition hover:bg-[#B10F16]/20"
-    >
-      <Download size={16} />
-      QR
-    </a>
-
-    <button
-      onClick={() => {
-        if (
-          window.confirm(
-            `Delete ${person.firstName} ${person.lastName}?`
-          )
-        ) {
-          deleteStaff(person.id);
-        }
-      }}
-      className="flex items-center gap-2 rounded-xl bg-red-100 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-200"
-    >
-      <Trash2 size={16} />
-      Delete
-    </button>
-
-  </div>
-</td>
-                </tr>
-              ))
-            )}
+                  </div>
+                </Td>
+                <Td className="tabular text-zinc-700">{person.staffNumber}</Td>
+                <Td className="text-zinc-700">{person.department}</Td>
+                <Td>
+                  <StatusBadge active={person.isActive} />
+                </Td>
+                <Td className="py-2">
+                  <RowActions
+                    person={person}
+                    onEdit={() => onEdit(person)}
+                    onDelete={() => confirmDelete(person)}
+                    deleting={isDeleting(person.id)}
+                  />
+                </Td>
+              </tr>
+            ))}
           </tbody>
-        </table>
+        </Table>
       </div>
-    </div>
+    </>
   );
 }

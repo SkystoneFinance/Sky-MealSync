@@ -87,19 +87,6 @@ export interface StaffActivatePayload {
 
 
 // ===============================
-// STAFF OTP VERIFICATION
-// ===============================
-
-export interface StaffVerifyOtpPayload {
-  staffNumber: string;
-
-  phoneNumber: string;
-
-  code: string;
-}
-
-
-// ===============================
 // LOGIN RESPONSE
 // ===============================
 
@@ -120,19 +107,4 @@ export interface StaffActivateResponse {
   success: boolean;
 
   message: string;
-}
-
-
-// ===============================
-// STAFF OTP RESPONSE
-// ===============================
-
-export interface StaffOtpResponse {
-  success: boolean;
-
-  message: string;
-
-  token: string;
-
-  user: StaffUser;
 }

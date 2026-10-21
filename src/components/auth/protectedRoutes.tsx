@@ -4,6 +4,7 @@ import {
 } from "react-router-dom";
 
 import { useAuth } from "../../hooks/useAuth";
+import { PageLoader } from "../ui";
 
 
 export default function ProtectedRoute() {
@@ -18,11 +19,7 @@ export default function ProtectedRoute() {
 
     return (
 
-      <div className="flex h-screen items-center justify-center font-semibold">
-
-        Loading MealSync...
-
-      </div>
+      <PageLoader />
 
     );
 

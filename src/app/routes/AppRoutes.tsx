@@ -1,23 +1,24 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import AdminLayout from "../layout/dashboardLayout";
+import AppShell from "../layout/AppShell";
 import ProtectedRoute from "../../components/auth/protectedRoutes";
 import RoleRoute from "../../components/auth/roleRoutes";
 
 import Login from "../../components/auth/login";
-import Dashboard from "../../components/dashboard/dashboard";
-import StaffDashboard from "../../components/stafff/staffDashboard";
+import { PageLoader } from "../../components/ui";
 
-import CheckMeal from "../../components/attendance/TodayAttendance";
-import History from "../../components/history/History";
-import Staffs from "../../components/stafff/staff";
-import Scan from "../../components/scan/scan";
-
-import MyProfile from "../../components/stafff/MyProfile";
-import WeeklyMealPlan from "../../components/mealplan/weeklyplan";
-import FoodManagement from "../../components/foodManagement/FoodManagement";
-import WeeklyPlanning from "../../components/mealPlanning/WeeklyPlanning";
-
+// Pages load on demand so the first visit downloads less
+const Dashboard = lazy(() => import("../../components/dashboard/dashboard"));
+const StaffDashboard = lazy(() => import("../../components/stafff/staffDashboard"));
+const CheckMeal = lazy(() => import("../../components/attendance/TodayAttendance"));
+const History = lazy(() => import("../../components/history/History"));
+const Staffs = lazy(() => import("../../components/stafff/staff"));
+const Scan = lazy(() => import("../../components/scan/scan"));
+const MyProfile = lazy(() => import("../../components/stafff/MyProfile"));
+const WeeklyMealPlan = lazy(() => import("../../components/mealplan/weeklyplan"));
+const FoodManagement = lazy(() => import("../../components/foodManagement/FoodManagement"));
+const WeeklyPlanning = lazy(() => import("../../components/mealPlanning/WeeklyPlanning"));
 
 import { useAuth } from "../../hooks/useAuth";
 
@@ -37,24 +38,24 @@ function DashboardEntry() {
 
 export default function AppRoutes() {
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<Login />} />
 
       <Route element={<ProtectedRoute />}>
-        <Route element={<AdminLayout />}>
+        <Route element={<AppShell />}>
 
           {/* DASHBOARD */}
           <Route index element={<DashboardEntry />} />
 
           {/* ADMIN / SUPER ADMIN */}
-          <Route path="check-meal" element={<CheckMeal />} />
-          <Route path="history" element={<History />} />
-
           <Route
             element={
               <RoleRoute allowedRoles={["ADMIN", "SUPER_ADMIN"]} />
             }
           >
+            <Route path="check-meal" element={<CheckMeal />} />
+            <Route path="history" element={<History />} />
             <Route path="scan" element={<Scan />} />
             <Route path="weekly-planning" element={<WeeklyPlanning />} />
           </Route>
@@ -66,7 +67,7 @@ export default function AppRoutes() {
             <Route path="staff" element={<Staffs />} />
           </Route>
 
-          {/* NORMAL STAFF */}
+          {/* KITCHEN */}
           <Route
             element={<RoleRoute allowedRoles={["ADMIN"]} />}
           >
@@ -85,5 +86,6 @@ export default function AppRoutes() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }

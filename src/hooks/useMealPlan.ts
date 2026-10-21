@@ -11,10 +11,18 @@ import type { DayChoice } from "../types/mealPlan";
 // STAFF
 // ==========================================
 
-export function useMyMealPlan() {
+export function useMyMealPlan(weekStart?: string) {
   return useQuery({
-    queryKey: ["meal-plan", "mine"],
-    queryFn: mealPlanService.getMine,
+    queryKey: ["meal-plan", "mine", weekStart ?? "next"],
+    queryFn: () => mealPlanService.getMine(weekStart),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useMyPlanStatus() {
+  return useQuery({
+    queryKey: ["meal-plan", "status"],
+    queryFn: mealPlanService.getMyStatus,
     // The banner should reflect a newly published menu
     staleTime: 60 * 1000,
   });

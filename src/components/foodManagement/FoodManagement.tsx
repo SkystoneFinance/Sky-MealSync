@@ -1,945 +1,320 @@
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
-  CalendarDays,
-  CheckCircle2,
-  Loader2,
+  CalendarRange,
+  Eye,
+  EyeOff,
+  Pencil,
   Plus,
-  Search,
-  UtensilsCrossed,
+  Trash2,
 } from "lucide-react";
 
-import { useMemo, useState } from "react";
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  PageHeader,
+  PageLoader,
+  WeekSwitcher,
+} from "../ui";
+import TakePhotoButton from "./TakePhotoButton";
+import TodayPhotos from "./TodayPhotos";
+import { isOwnDishPhoto, lagosTodayKey } from "../../utils/mealPlanDates";
+import DishModal from "./DishModal";
+import DishThumbnail from "./DishThumbnail";
 
 import {
-  useCreateFoodOption,
   useDeleteFoodOption,
   useFoodOptions,
-  useFoodOptionSummary,
-  useUpdateFoodOption,
   useUpdateFoodOptionStatus,
 } from "../../hooks/useFoodOptions";
-
-import MealCard from "./MealCard";
-import MealModal from "./MealModal";
-import SummaryCard from "./SummaryCard";
-import DemandSummaryCard from "./DemandSummaryCard";
+import { apiErrorMessage, formatDay } from "../../utils/mealPlanDates";
 
 import type { FoodOption } from "../../types/foodOption";
 
-
 // ==========================================
-// HELPERS
+// WEEK HELPERS (UTC, "YYYY-MM-DD" keys)
 // ==========================================
 
-function getTodayDate() {
-  const today = new Date();
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-  const year = today.getFullYear();
-
-  const month = String(
-    today.getMonth() + 1
-  ).padStart(2, "0");
-
-  const day = String(
-    today.getDate()
-  ).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+function toKey(date: Date) {
+  return date.toISOString().slice(0, 10);
 }
 
+// Monday (UTC midnight) of the current week.
+function currentMonday() {
+  const now = new Date();
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const daysSinceMonday = (new Date(today).getUTCDay() + 6) % 7;
+  return today - daysSinceMonday * DAY_MS;
+}
+
+function weekDays(offset: number) {
+  const monday = currentMonday() + offset * 7 * DAY_MS;
+  return Array.from({ length: 5 }, (_, index) =>
+    toKey(new Date(monday + index * DAY_MS))
+  );
+}
+
+function weekSublabel(offset: number) {
+  if (offset === 0) return "This week";
+  if (offset === 1) return "Next week";
+  if (offset === -1) return "Last week";
+  return offset > 0 ? `In ${offset} weeks` : `${-offset} weeks ago`;
+}
+
+function weekLabel(days: string[]) {
+  const first = formatDay(days[0], { day: "numeric", month: "short" });
+  const last = formatDay(days[days.length - 1], {
+    day: "numeric",
+    month: "short",
+  });
+  return `${first} – ${last}`;
+}
 
 // ==========================================
-// COMPONENT
+// PAGE
 // ==========================================
+
+type ModalState =
+  | { mode: "add"; date: string }
+  | { mode: "edit"; dish: FoodOption }
+  | null;
 
 export default function FoodManagement() {
+  const { data: dishes = [], isLoading, isError, refetch } = useFoodOptions();
 
-  // ========================================
-  // FOOD OPTIONS
-  // ========================================
+  const [weekOffset, setWeekOffset] = useState(1);
+  const [modal, setModal] = useState<ModalState>(null);
 
-  const {
-    data: meals = [],
-    isLoading,
-    isError,
-  } = useFoodOptions();
+  const days = useMemo(() => weekDays(weekOffset), [weekOffset]);
 
+  const dishesByDay = useMemo(() => {
+    const map = new Map<string, FoodOption[]>();
+    for (const dish of dishes) {
+      const key = dish.mealDate.slice(0, 10);
+      const list = map.get(key);
+      if (list) list.push(dish);
+      else map.set(key, [dish]);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    }
+    return map;
+  }, [dishes]);
 
-  // ========================================
-  // DEMAND DATE
-  // ========================================
-
-  const [selectedDate, setSelectedDate] =
-    useState(getTodayDate());
-
-
-  // ========================================
-  // FOOD DEMAND SUMMARY
-  // ========================================
-
-  const {
-    data: demandSummary,
-    isLoading: demandSummaryLoading,
-    isError: demandSummaryError,
-  } = useFoodOptionSummary(
-    selectedDate
+  const weekTotal = days.reduce(
+    (total, day) => total + (dishesByDay.get(day)?.length ?? 0),
+    0
   );
 
-
-  // ========================================
-  // MUTATIONS
-  // ========================================
-
-  const createMeal =
-    useCreateFoodOption();
-
-  const updateMeal =
-    useUpdateFoodOption();
-
-  const updateStatus =
-    useUpdateFoodOptionStatus();
-
-  const deleteMeal =
-    useDeleteFoodOption();
-
-
-  // ========================================
-  // SEARCH
-  // ========================================
-
-  const [search, setSearch] =
-    useState("");
-
-
-  // ========================================
-  // MODAL
-  // ========================================
-
-  const [showModal, setShowModal] =
-    useState(false);
-
-  const [editingMeal, setEditingMeal] =
-    useState<FoodOption | null>(null);
-
-
-  // ========================================
-  // FORM
-  // ========================================
-
-  const [name, setName] =
-    useState("");
-
-  const [image, setImage] =
-    useState("");
-
-  const [mealDate, setMealDate] =
-    useState(getTodayDate());
-
-
-  // ========================================
-  // FOOD MANAGEMENT SUMMARY
-  // ========================================
-
-  const summary = useMemo(() => {
-
-    const today =
-      new Date();
-
-    // const todayDate =
-    //   new Date(
-    //     `${getTodayDate()}T00:00:00`
-    //   );
-
-
-    // --------------------------------------
-    // START OF CURRENT WEEK
-    // --------------------------------------
-
-    const day =
-      today.getDay();
-
-    const difference =
-      day === 0
-        ? -6
-        : 1 - day;
-
-    const monday =
-      new Date(today);
-
-    monday.setDate(
-      monday.getDate() + difference
-    );
-
-    monday.setHours(
-      0,
-      0,
-      0,
-      0
-    );
-
-
-    // --------------------------------------
-    // END OF CURRENT WEEK
-    // --------------------------------------
-
-    const friday =
-      new Date(monday);
-
-    friday.setDate(
-      monday.getDate() + 4
-    );
-
-    friday.setHours(
-      23,
-      59,
-      59,
-      999
-    );
-
-
-    // --------------------------------------
-    // MEALS THIS WEEK
-    // --------------------------------------
-
-    const thisWeek =
-      meals.filter((meal) => {
-
-        const date =
-          new Date(
-            `${meal.mealDate.slice(0, 10)}T00:00:00`
-          );
-
-        return (
-          date >= monday &&
-          date <= friday
-        );
-
-      });
-
-
-    // --------------------------------------
-    // ACTIVE MEALS
-    // --------------------------------------
-
-    const activeMeals =
-      meals.filter(
-        (meal) => meal.isActive
-      );
-
-
-    return {
-      total: meals.length,
-      thisWeek: thisWeek.length,
-      active: activeMeals.length,
-    };
-
-  }, [meals]);
-
-
-  // ========================================
-  // FILTERED MEALS
-  // ========================================
-
-  const filteredMeals =
-    useMemo(() => {
-
-      const value =
-        search
-          .trim()
-          .toLowerCase();
-
-
-      if (!value) {
-        return meals;
-      }
-
-
-      return meals.filter(
-        (meal) =>
-          meal.name
-            .toLowerCase()
-            .includes(value)
-      );
-
-    }, [meals, search]);
-
-
-  // ========================================
-  // OPEN ADD MODAL
-  // ========================================
-
-  const openAddModal = () => {
-
-    setEditingMeal(null);
-
-    setName("");
-
-    setImage("");
-
-    setMealDate(
-      getTodayDate()
-    );
-
-    setShowModal(true);
-
-  };
-
-
-  // ========================================
-  // OPEN EDIT MODAL
-  // ========================================
-
-  const openEditModal = (
-    meal: FoodOption
-  ) => {
-
-    setEditingMeal(meal);
-
-    setName(
-      meal.name
-    );
-
-    setImage(
-      meal.image
-    );
-
-    setMealDate(
-      meal.mealDate.slice(0, 10)
-    );
-
-    setShowModal(true);
-
-  };
-
-
-  // ========================================
-  // CLOSE MODAL
-  // ========================================
-
-  const closeModal = () => {
-
-    if (
-      createMeal.isPending ||
-      updateMeal.isPending
-    ) {
-      return;
+  const updateStatus = useUpdateFoodOptionStatus();
+  const deleteDish = useDeleteFoodOption();
+
+  const toggleStatus = async (dish: FoodOption) => {
+    try {
+      await updateStatus.mutateAsync({ id: dish.id, isActive: !dish.isActive });
+      toast.success(dish.isActive ? `${dish.name} disabled` : `${dish.name} enabled`);
+    } catch (error) {
+      toast.error(apiErrorMessage(error, "Couldn't change the dish status."));
     }
-
-    setShowModal(false);
-
   };
 
-
-  // ========================================
-  // SUBMIT FOOD OPTION
-  // ========================================
-
-  const handleSubmit = async (
-    event: React.FormEvent
-  ) => {
-
-    event.preventDefault();
-
-
-    if (
-      !name.trim() ||
-      !image.trim() ||
-      !mealDate
-    ) {
-      return;
-    }
-
+  const removeDish = async (dish: FoodOption) => {
+    if (!window.confirm(`Delete "${dish.name}"? This can't be undone.`)) return;
 
     try {
-
-      if (editingMeal) {
-
-        await updateMeal.mutateAsync({
-
-          id:
-            editingMeal.id,
-
-          data: {
-
-            name:
-              name.trim(),
-
-            image:
-              image.trim(),
-
-            mealDate,
-
-          },
-
-        });
-
-      } else {
-
-        await createMeal.mutateAsync({
-
-          name:
-            name.trim(),
-
-          image:
-            image.trim(),
-
-          mealDate,
-
-        });
-
-      }
-
-
-      closeModal();
-
+      await deleteDish.mutateAsync(dish.id);
+      toast.success(`${dish.name} deleted`);
     } catch (error) {
-
-      console.error(
-        "Food option save error:",
-        error
-      );
-
+      // 409 when staff have already chosen it — the server explains why.
+      toast.error(apiErrorMessage(error, "Couldn't delete the dish."));
     }
-
   };
 
-
-  // ========================================
-  // CHANGE STATUS
-  // ========================================
-
-  const handleStatusChange = async (
-    meal: FoodOption
-  ) => {
-
-    try {
-
-      await updateStatus.mutateAsync({
-
-        id:
-          meal.id,
-
-        isActive:
-          !meal.isActive,
-
-      });
-
-    } catch (error) {
-
-      console.error(
-        "Food option status error:",
-        error
-      );
-
-    }
-
+  const busyId = (mutation: { isPending: boolean; variables?: unknown }) => {
+    if (!mutation.isPending) return null;
+    const vars = mutation.variables;
+    if (typeof vars === "string") return vars;
+    return (vars as { id?: string } | undefined)?.id ?? null;
   };
 
-
-  // ========================================
-  // DELETE
-  // ========================================
-
-  const handleDelete = async (
-    meal: FoodOption
-  ) => {
-
-    const confirmed =
-      window.confirm(
-        `Delete "${meal.name}"? This action cannot be undone.`
-      );
-
-
-    if (!confirmed) {
-      return;
-    }
-
-
-    try {
-
-      await deleteMeal.mutateAsync(
-        meal.id
-      );
-
-    } catch (error) {
-
-      console.error(
-        "Food option delete error:",
-        error
-      );
-
-    }
-
-  };
-
-
-  // ========================================
-  // INITIAL LOADING
-  // ========================================
-
-  if (isLoading) {
-
-    return (
-      <div className="mx-auto flex min-h-[500px] w-full max-w-7xl items-center justify-center">
-
-        <div className="flex items-center gap-3 text-sm text-slate-500">
-
-          <Loader2
-            size={20}
-            className="animate-spin text-[#B10F16]"
-          />
-
-          Loading meals...
-
-        </div>
-
-      </div>
-    );
-
-  }
-
-
-  // ========================================
-  // INITIAL ERROR
-  // ========================================
-
-  if (isError) {
-
-    return (
-      <div className="mx-auto flex min-h-[400px] w-full max-w-7xl items-center justify-center">
-
-        <div className="text-center">
-
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FDEBEC] text-[#B10F16]">
-
-            <UtensilsCrossed
-              size={24}
-            />
-
-          </div>
-
-
-          <h2 className="mt-4 text-lg font-bold text-slate-900">
-            Unable to load meals
-          </h2>
-
-
-          <p className="mt-1 text-sm text-slate-500">
-            Something went wrong while loading the food menu.
-          </p>
-
-        </div>
-
-      </div>
-    );
-
-  }
-
-
-  // ========================================
-  // PAGE
-  // ========================================
+  const statusBusyId = busyId(updateStatus);
+  const deleteBusyId = busyId(deleteDish);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
+    <div>
+      <PageHeader
+        title="Menu"
+        description="Add the dishes for each day. Publish the week from Weekly planning when it's ready."
+        actions={
+          <Link
+            to="/weekly-planning"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium whitespace-nowrap text-zinc-800 shadow-sm transition-colors hover:bg-zinc-50"
+          >
+            <CalendarRange size={16} />
+            Weekly planning
+          </Link>
+        }
+      />
 
-
-      {/* ======================================
-          HEADER
-      ======================================= */}
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-
-        <div>
-
-          <p className="text-sm font-medium text-slate-500">
-            Chef
-          </p>
-
-
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">
-            Food Management
-          </h1>
-
-
-          <p className="mt-1 text-sm text-slate-500">
-            Create and manage the meals available to staff.
-          </p>
-
-        </div>
-
-
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#B10F16] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#920C12]"
-        >
-
-          <Plus
-            size={18}
+      <div className="space-y-6">
+        <TodayPhotos />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <WeekSwitcher
+            label={weekLabel(days)}
+            sublabel={weekSublabel(weekOffset)}
+            onPrevious={() => setWeekOffset((value) => value - 1)}
+            onNext={() => setWeekOffset((value) => value + 1)}
           />
-
-          Add Meal
-
-        </button>
-
-      </div>
-
-
-      {/* ======================================
-          MANAGEMENT SUMMARY
-      ======================================= */}
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-
-
-        <SummaryCard
-          icon={
-            <UtensilsCrossed
-              size={20}
-            />
-          }
-          label="Total Meals"
-          value={String(summary.total)}
-        />
-
-
-        <SummaryCard
-          icon={
-            <CalendarDays
-              size={20}
-            />
-          }
-          label="This Week"
-          value={String(summary.thisWeek)}
-        />
-
-
-        <SummaryCard
-          icon={
-            <CheckCircle2
-              size={20}
-            />
-          }
-          label="Active Meals"
-          value={String(summary.active)}
-        />
-
-
-      </div>
-
-
-      {/* ======================================
-          MEALS MANAGEMENT
-      ======================================= */}
-
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-
-
-        {/* TOOLBAR */}
-
-        <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
-
-
-          <div>
-
-            <h2 className="text-lg font-bold text-slate-900">
-              Meals
-            </h2>
-
-
-            <p className="mt-1 text-sm text-slate-500">
-              Manage your current and upcoming food menu.
+          {!isLoading && !isError && (
+            <p className="text-sm text-zinc-500">
+              {weekTotal === 0
+                ? "No dishes this week yet"
+                : `${weekTotal} ${weekTotal === 1 ? "dish" : "dishes"} this week`}
             </p>
-
-          </div>
-
-
-          {/* SEARCH */}
-
-          <div className="relative w-full sm:w-72">
-
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-
-
-            <input
-              type="text"
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value
-                )
-              }
-              placeholder="Search meals..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-[#B10F16] focus:bg-white"
-            />
-
-          </div>
-
-
+          )}
         </div>
 
-
-        {/* ======================================
-            EMPTY / MEAL LIST
-        ======================================= */}
-
-        {filteredMeals.length === 0 &&
-        meals.length > 0 ? (
-
-          /* SEARCH EMPTY */
-
-          <div className="flex min-h-[320px] flex-col items-center justify-center px-6 text-center">
-
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-
-              <Search
-                size={26}
-              />
-
-            </div>
-
-
-            <h3 className="mt-5 text-lg font-bold text-slate-900">
-              No meals found
-            </h3>
-
-
-            <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-              We couldn't find a meal matching "{search}".
-            </p>
-
-          </div>
-
-        ) : filteredMeals.length === 0 ? (
-
-          /* DATABASE EMPTY */
-
-          <div className="flex min-h-[320px] flex-col items-center justify-center px-6 text-center">
-
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FDEBEC] text-[#B10F16]">
-
-              <UtensilsCrossed
-                size={28}
-              />
-
-            </div>
-
-
-            <h3 className="mt-5 text-lg font-bold text-slate-900">
-              No meals yet
-            </h3>
-
-
-            <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-              Start building your food menu by adding the first meal.
-              Staff will be able to select meals based on their assigned
-              dates.
-            </p>
-
-
-            <button
-              type="button"
-              onClick={openAddModal}
-              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#B10F16] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#920C12]"
-            >
-
-              <Plus
-                size={18}
-              />
-
-              Add First Meal
-
-            </button>
-
-          </div>
-
+        {isLoading ? (
+          <PageLoader />
+        ) : isError ? (
+          <Callout
+            tone="danger"
+            title="Couldn't load the menu"
+            action={
+              <Button variant="secondary" size="sm" onClick={() => refetch()}>
+                Try again
+              </Button>
+            }
+          >
+            Check your connection and try again.
+          </Callout>
         ) : (
+          days.map((day) => {
+            const dayDishes = dishesByDay.get(day) ?? [];
 
-          /* MEAL LIST */
-
-          <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2 xl:grid-cols-3">
-
-            {filteredMeals.map(
-              (meal) => (
-
-                <MealCard
-                  key={meal.id}
-                  meal={meal}
-
-                  onEdit={() =>
-                    openEditModal(
-                      meal
-                    )
+            return (
+              <Card key={day}>
+                <CardHeader
+                  title={formatDay(day)}
+                  description={
+                    dayDishes.length === 0
+                      ? undefined
+                      : `${dayDishes.length} ${dayDishes.length === 1 ? "dish" : "dishes"}`
                   }
-
-                  onToggleStatus={() =>
-                    handleStatusChange(
-                      meal
-                    )
-                  }
-
-                  onDelete={() =>
-                    handleDelete(
-                      meal
-                    )
-                  }
-
-                  statusLoading={
-                    updateStatus.isPending &&
-                    updateStatus.variables?.id ===
-                      meal.id
-                  }
-
-                  deleteLoading={
-                    deleteMeal.isPending &&
-                    deleteMeal.variables ===
-                      meal.id
+                  actions={
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<Plus size={16} />}
+                      onClick={() => setModal({ mode: "add", date: day })}
+                      aria-label={`Add dish for ${formatDay(day)}`}
+                    >
+                      Add dish
+                    </Button>
                   }
                 />
 
-              )
-            )}
+                {dayDishes.length === 0 ? (
+                  <p className="px-5 py-6 text-sm text-zinc-400">No dishes yet</p>
+                ) : (
+                  <ul className="divide-y divide-zinc-100">
+                    {dayDishes.map((dish) => (
+                      <li
+                        key={dish.id}
+                        className="flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <DishThumbnail
+                            key={dish.image}
+                            src={dish.image}
+                            alt={dish.name}
+                            className={
+                              dish.isActive ? "h-12 w-12" : "h-12 w-12 opacity-50"
+                            }
+                          />
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <p
+                              className={
+                                dish.isActive
+                                  ? "truncate font-medium text-zinc-900"
+                                  : "truncate font-medium text-zinc-500"
+                              }
+                            >
+                              {dish.name}
+                            </p>
+                            {!dish.isActive && <Badge>Disabled</Badge>}
+                            {isOwnDishPhoto(dish.image) ? (
+                              <Badge tone="success">Our photo</Badge>
+                            ) : (
+                              <Badge>Internet image</Badge>
+                            )}
+                          </div>
+                        </div>
 
-          </div>
-
+                        <div className="flex flex-wrap items-center gap-1 pl-15 sm:pl-0">
+                          {/* A real photo can be taken from the day it's served */}
+                          {day <= lagosTodayKey() && (
+                            <TakePhotoButton
+                              dish={dish}
+                              retake={isOwnDishPhoto(dish.image)}
+                              variant={isOwnDishPhoto(dish.image) ? "ghost" : "secondary"}
+                            />
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={<Pencil size={15} />}
+                            onClick={() => setModal({ mode: "edit", dish })}
+                            aria-label={`Edit ${dish.name}`}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={dish.isActive ? <EyeOff size={15} /> : <Eye size={15} />}
+                            loading={statusBusyId === dish.id}
+                            onClick={() => toggleStatus(dish)}
+                            aria-label={`${dish.isActive ? "Disable" : "Enable"} ${dish.name}`}
+                          >
+                            {dish.isActive ? "Disable" : "Enable"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-700 hover:bg-red-50 hover:text-red-800"
+                            icon={<Trash2 size={15} />}
+                            loading={deleteBusyId === dish.id}
+                            onClick={() => removeDish(dish)}
+                            aria-label={`Delete ${dish.name}`}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            );
+          })
         )}
-
-
       </div>
 
-
-      {/* ======================================
-          MEAL DEMAND HEADER
-      ======================================= */}
-
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-
-
-        <div>
-
-          <h2 className="text-base font-bold text-slate-900">
-            Meal Demand
-          </h2>
-
-
-          <p className="text-sm text-slate-500">
-            View staff meal selections for a specific date.
-          </p>
-
-        </div>
-
-
-        {/* DATE SELECTOR */}
-
-        <div className="flex items-center gap-2">
-
-          <CalendarDays
-            size={18}
-            className="text-slate-400"
-          />
-
-
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(event) =>
-              setSelectedDate(
-                event.target.value
-              )
-            }
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-[#B10F16] focus:bg-white"
-          />
-
-        </div>
-
-      </div>
-
-
-      {/* ======================================
-          MEAL DEMAND
-      ======================================= */}
-
-      {demandSummaryError ? (
-
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-600">
-
-          Unable to load meal demand for the selected date.
-
-        </div>
-
-      ) : (
-
-        <DemandSummaryCard
-          totalSelections={
-            demandSummary?.totalSelections ?? 0
-          }
-
-          options={
-            demandSummary?.options ?? []
-          }
-
-          loading={
-            demandSummaryLoading
-          }
+      {modal && (
+        <DishModal
+          key={modal.mode === "edit" ? modal.dish.id : modal.date}
+          dish={modal.mode === "edit" ? modal.dish : null}
+          defaultDate={modal.mode === "add" ? modal.date : days[0]}
+          onClose={() => setModal(null)}
         />
-
       )}
-
-
-      {/* ======================================
-          ADD / EDIT MODAL
-      ======================================= */}
-
-      {showModal && (
-
-        <MealModal
-          editingMeal={
-            editingMeal
-          }
-
-          name={
-            name
-          }
-
-          image={
-            image
-          }
-
-          mealDate={
-            mealDate
-          }
-
-          setName={
-            setName
-          }
-
-          setImage={
-            setImage
-          }
-
-          setMealDate={
-            setMealDate
-          }
-
-          onClose={
-            closeModal
-          }
-
-          onSubmit={
-            handleSubmit
-          }
-
-          loading={
-            createMeal.isPending ||
-            updateMeal.isPending
-          }
-        />
-
-      )}
-
     </div>
   );
 }

@@ -1,82 +1,107 @@
+import { Avatar, Badge, Table, Td, Th } from "../ui";
 import type { Attendance } from "../../types/attendance";
 
-interface Props {
-  attendance: Attendance[];
+// One served meal, plus which of the person's servings today it was.
+export interface ServedRow {
+  attendance: Attendance;
+  servingNumber: number;
 }
 
-export default function AttendanceTable({
-  attendance,
-}: Props) {
+// "14:05" in canteen time, so every device shows the same clock.
+function formatServedTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Africa/Lagos",
+  });
+}
+
+function staffName(row: ServedRow) {
+  const { firstName, lastName } = row.attendance.staff;
+  return `${firstName} ${lastName}`.trim();
+}
+
+function ServingBadge({ servingNumber }: { servingNumber: number }) {
+  if (servingNumber < 2) return null;
+  return <Badge tone="info">Serving {servingNumber}</Badge>;
+}
+
+export default function AttendanceTable({ rows }: { rows: ServedRow[] }) {
   return (
-    <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr className="border-b text-left text-sm font-semibold text-gray-600">
-              <th className="px-6 py-4">Name</th>
-              <th className="px-6 py-4">Staff Number</th>
-              <th className="px-6 py-4">Department</th>
-              <th className="px-6 py-4">Scanned Time</th>
-              <th className="px-6 py-4">Status</th>
+    <>
+      {/* Desktop / tablet */}
+      <div className="hidden md:block">
+        <Table>
+          <thead>
+            <tr>
+              <Th>Staff</Th>
+              <Th>Staff number</Th>
+              <Th>Department</Th>
+              <Th>Dish</Th>
+              <Th className="text-right">Time served</Th>
             </tr>
           </thead>
-
           <tbody>
-            {attendance.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="py-12 text-center text-gray-500"
-                >
-                  No attendance records found.
-                </td>
-              </tr>
-            ) : (
-              attendance.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-b transition hover:bg-gray-50 last:border-none"
-                >
-                  <td className="px-6 py-5">
-                    <div>
-                      <p className="font-semibold">
-                        {item.staff.firstName}{" "}
-                        {item.staff.lastName}
-                      </p>
+            {rows.map((row) => {
+              const { attendance } = row;
+              const name = staffName(row);
 
-                      <p className="text-sm text-gray-500">
-                        ID: {item.staff.id.slice(0, 8)}...
-                      </p>
+              return (
+                <tr key={attendance.id} className="transition-colors hover:bg-zinc-50/60">
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={name} size="sm" />
+                      <span className="font-medium text-zinc-900">{name}</span>
+                      <ServingBadge servingNumber={row.servingNumber} />
                     </div>
-                  </td>
-
-                  <td className="px-6 py-5">
-                    {item.staff.staffNumber}
-                  </td>
-
-                  <td className="px-6 py-5">
-                    {item.staff.department}
-                  </td>
-
-                  <td className="px-6 py-5">
-                    {new Date(item.scannedAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}
-                  </td>
-
-                  <td className="px-6 py-5">
-                    <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
-                      Served
-                    </span>
-                  </td>
+                  </Td>
+                  <Td className="tabular text-zinc-600">{attendance.staff.staffNumber}</Td>
+                  <Td className="text-zinc-600">{attendance.staff.department || "—"}</Td>
+                  <Td className="text-zinc-900">{attendance.meal?.name ?? "—"}</Td>
+                  <Td className="tabular text-right text-zinc-600">
+                    <time dateTime={attendance.scannedAt}>
+                      {formatServedTime(attendance.scannedAt)}
+                    </time>
+                  </Td>
                 </tr>
-              ))
-            )}
+              );
+            })}
           </tbody>
-        </table>
+        </Table>
       </div>
-    </div>
+
+      {/* Phone */}
+      <ul className="divide-y divide-zinc-100 md:hidden">
+        {rows.map((row) => {
+          const { attendance } = row;
+          const name = staffName(row);
+
+          return (
+            <li key={attendance.id} className="flex items-center gap-3 px-4 py-3">
+              <Avatar name={name} size="md" />
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <p className="truncate font-medium text-zinc-900">{name}</p>
+                  <ServingBadge servingNumber={row.servingNumber} />
+                </div>
+                <p className="truncate text-sm text-zinc-500">
+                  {attendance.staff.staffNumber}
+                  {attendance.staff.department && ` · ${attendance.staff.department}`}
+                </p>
+                {attendance.meal && (
+                  <p className="truncate text-sm text-zinc-800">{attendance.meal.name}</p>
+                )}
+              </div>
+              <time
+                dateTime={attendance.scannedAt}
+                className="tabular shrink-0 text-sm text-zinc-500"
+              >
+                {formatServedTime(attendance.scannedAt)}
+              </time>
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }

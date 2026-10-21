@@ -1,5 +1,11 @@
 import axios from "../lib/axios";
-import type { Attendance } from "../types/attendance";
+import type {
+  Attendance,
+  ScanPayload,
+  ScanPreview,
+  ServePayload,
+  ServeResult,
+} from "../types/attendance";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -8,72 +14,38 @@ interface ApiResponse<T> {
 }
 
 export const attendanceService = {
-
-  // =========================================
-  // SCAN QR
-  // =========================================
-
-  async scan(
-    data: { qrCodeId: string },
-  ) {
-    const response =
-      await axios.post<
-        ApiResponse<any>
-      >(
-        "/attendance/scan",
-        data,
-      );
+  // Identify a staff member from their QR code (preview only).
+  async scan(data: ScanPayload) {
+    const response = await axios.post<ApiResponse<ScanPreview>>(
+      "/attendance/scan",
+      data
+    );
 
     return response.data;
   },
 
-
-  // =========================================
-  // SERVE MEAL
-  // =========================================
-
-  async serveMeal(
-    data: { staffId: string },
-  ) {
-    const response =
-      await axios.post<
-        ApiResponse<any>
-      >(
-        "/attendance/serve",
-        data,
-      );
+  // Record one serving for the staff member.
+  async serveMeal(data: ServePayload) {
+    const response = await axios.post<ApiResponse<ServeResult>>(
+      "/attendance/serve",
+      data
+    );
 
     return response.data;
   },
-
-
-  // =========================================
-  // TODAY
-  // =========================================
 
   async getToday() {
-    const response =
-      await axios.get<
-        ApiResponse<Attendance[]>
-      >(
-        "/attendance/today",
-      );
+    const response = await axios.get<ApiResponse<Attendance[]>>(
+      "/attendance/today"
+    );
 
     return response.data.data;
   },
 
-
-  // =========================================
-  // HISTORY
-  // =========================================
-
   async getHistory() {
-    const response =
-      await axios.get<
-        ApiResponse<Attendance[]>
-      >(
-        "/attendance/history",
-      );
+    const response = await axios.get<ApiResponse<Attendance[]>>(
+      "/attendance/history"
+    );
 
     return response.data.data;
   },

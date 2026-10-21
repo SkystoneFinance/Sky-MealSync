@@ -9,6 +9,25 @@ Sections: **Added** · **Changed** · **Fixed** · **Removed** · **Security**
 
 ## [Unreleased]
 
+### Changed
+- **Complete UI redesign** ("clean & light"): new shared UI kit (`src/components/ui`), new app shell (white sidebar with role-based navigation and a user card with logout, mobile top bar and drawer), and every screen rebuilt: sign-in, staff home, My meals, My QR code, Overview, Weekly planning, Menu, Scan, Served today, Reports, Staff.
+- Font is now Futura (falls back to Jost, an open-source Futura revival, where Futura isn't installed). Only the Skystone logo, name and red (#B10F16) were kept.
+- Navigation renamed per role: staff see Home, My meals and My QR code; the kitchen sees Overview, Weekly planning, Menu, Scan and Served today; administrators see Overview, Weekly planning, Served today, Reports, Scan and Staff.
+- The Menu page is now a week-by-week dish editor.
+
+### Added
+- **Week arrows** on My meals and Weekly planning: view this week and past weeks read-only (including weeks chosen day by day before weekly planning), and plan up to two weeks ahead.
+- Staff home shows today's meal and the status of the next two weeks.
+- Staff can be edited and activated or deactivated from the Staff page.
+- Served today shows the dish each person chose, and search matches dish names.
+- **Dish photos**: on the day, the Overview and Menu ask the chef to photograph each of today's dishes (opens the phone camera; photos are resized before upload). A photo replaces the internet image for every dish with that name, with progress shown ("X of Y upcoming dishes use our photos"). Menu rows show "Our photo" / "Internet image".
+- Pasted image URLs no longer have to start with http(s), and are optional when we already have a photo of the dish.
+
+### Removed
+- framer-motion animations, react-icons, the old Navbar/Sidebar and unused files (`App.tsx`, `pages/DashboardEntry.tsx`, `utils/download.ts`, unused history/report components and hooks, OTP types, `tailwind.config.ts`).
+
+## 2026-10-21
+
 ### Added
 - **Weekly meal planning.** Staff choose next week's meals (or "No meal required") on Select Meal, prompted by a prominent banner on their home page once the menu is published. A new **Weekly Planning** page (chef and SUPER_ADMIN) handles closed days, publishing, a copyable WhatsApp announcement, and the Meal Preparation Summary with Excel export. Dashboard banners remind the chef to publish (from Tuesday) and announce when the week is confirmed.
 

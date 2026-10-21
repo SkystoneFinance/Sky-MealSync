@@ -1,71 +1,79 @@
-import DashboardHeader from "./DashboardHeader";
+import { useEffect, useState } from "react";
+
 import StatsSection from "./statsSection";
 import RecentAttendance from "./RecentAttendance";
 import DepartmentSummary from "./DepartmentSummary";
 import PlanningBanner from "../mealPlanning/PlanningBanner";
+import TodayPhotos from "../foodManagement/TodayPhotos";
 
+import { Callout, PageHeader } from "../ui";
 import { useDashboard } from "../../hooks/useDashboard";
 import { useRecentAttendance } from "../../hooks/useRecentAttendance";
 import { useDepartmentSummary } from "../../hooks/useDepartmentSummary";
+import { apiErrorMessage } from "../../utils/mealPlanDates";
+
+// Re-render once a minute so the greeting and "x min ago" labels stay fresh.
+function useNow(intervalMs = 60_000) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(id);
+  }, [intervalMs]);
+
+  return now;
+}
+
+function greeting(now: number) {
+  const hour = new Date(now).getHours();
+
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 export default function Dashboard() {
-  const {
-    data: stats,
-    isPending,
-    isError,
-  } = useDashboard();
+  const now = useNow();
 
-  const {
-    data: recentAttendance,
-    isPending: attendanceLoading,
-  } = useRecentAttendance();
+  const stats = useDashboard();
+  const recent = useRecentAttendance();
+  const departments = useDepartmentSummary();
 
-  const {
-    data: departmentSummary,
-    isPending: departmentLoading,
-  } = useDepartmentSummary();
-
-  if (isPending) {
-    return (
-      <div className="p-6">
-        Loading Dashboard...
-      </div>
-    );
-  }
-
-  if (isError || !stats) {
-    return (
-      <div className="p-6 text-red-600">
-        Unable to load dashboard.
-      </div>
-    );
-  }
+  const today = new Date(now).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      <PageHeader eyebrow={greeting(now)} title="Overview" description={today} />
 
       <PlanningBanner />
+      <TodayPhotos />
 
-      <DashboardHeader />
+      {stats.isError && (
+        <Callout tone="danger" title="Couldn't load today's numbers">
+          {apiErrorMessage(stats.error)}
+        </Callout>
+      )}
 
-      <StatsSection
-        stats={stats}
-      />
+      <StatsSection stats={stats.data} error={stats.isError} />
 
       <div className="grid gap-6 lg:grid-cols-2">
-
         <RecentAttendance
-          loading={attendanceLoading}
-          data={recentAttendance ?? []}
+          loading={recent.isPending}
+          error={recent.isError}
+          data={recent.data ?? []}
+          now={now}
         />
-
         <DepartmentSummary
-          loading={departmentLoading}
-          data={departmentSummary ?? []}
+          loading={departments.isPending}
+          error={departments.isError}
+          data={departments.data ?? []}
         />
-
       </div>
-
     </div>
   );
 }

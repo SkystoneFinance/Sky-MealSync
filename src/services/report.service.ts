@@ -1,69 +1,35 @@
 import axios from "../lib/axios";
 
 import type {
+  ExportPeriod,
+  ReportPeriod,
   ReportSummary,
   StaffMealSummary,
 } from "../types/report";
 
-export type ExportPeriod =
-  | "today"
-  | "current-week"
-  | "previous-week"
-  | "current-month"
-  | "previous-month";
+export type { ExportPeriod } from "../types/report";
 
 export const reportService = {
-  async today() {
-    const response =
-      await axios.get<ReportSummary>(
-        "/reports/today",
-      );
+  async summary(period: ReportPeriod) {
+    const response = await axios.get<ReportSummary>(`/reports/${period}`);
 
     return response.data;
   },
 
-  async weekly() {
-    const response =
-      await axios.get<ReportSummary>(
-        "/reports/weekly",
-      );
-
-    return response.data;
-  },
-
-  async monthly() {
-    const response =
-      await axios.get<ReportSummary>(
-        "/reports/monthly",
-      );
-
-    return response.data;
-  },
-
-  async staffSummary(
-    period: string,
-  ) {
-    const response =
-      await axios.get<{
-        success: boolean;
-        data: StaffMealSummary[];
-      }>(
-        `/reports/staff-summary?period=${period}`,
-      );
+  async staffSummary(period: ReportPeriod) {
+    const response = await axios.get<{
+      success: boolean;
+      data: StaffMealSummary[];
+    }>("/reports/staff-summary", { params: { period } });
 
     return response.data.data;
   },
 
-  async downloadReport(
-    period: ExportPeriod,
-  ) {
-    const response =
-      await axios.get(
-        `/reports/export?period=${period}`,
-        {
-          responseType: "blob",
-        },
-      );
+  async downloadReport(period: ExportPeriod) {
+    const response = await axios.get<Blob>("/reports/export", {
+      params: { period },
+      responseType: "blob",
+    });
 
     return response.data;
   },
