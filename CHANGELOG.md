@@ -9,6 +9,11 @@ Sections: **Added** · **Changed** · **Fixed** · **Removed** · **Security**
 
 ## [Unreleased]
 
+### Fixed
+- Pop-up (toast) messages now appear: login errors, scan results, staff import results. The `<Toaster />` was never mounted.
+
+## 2026-10-20
+
 ### Added
 - **Log out** button in the sidebar (asks for confirmation).
 - Sliding sessions: the app renews the login token on load and at most once a day while open (`src/lib/session.ts`), so active users never have to log in again. Needs backend `POST /auth/refresh`.
