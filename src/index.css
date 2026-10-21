@@ -105,9 +105,12 @@ img {
    Links
 =========================== */
 
-a {
-  text-decoration: none;
-  color: inherit;
+/* In the base layer so Tailwind text-* classes on links still apply */
+@layer base {
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
 }
 
 .sidebar-scroll {

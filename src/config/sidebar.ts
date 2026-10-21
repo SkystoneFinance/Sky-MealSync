@@ -5,6 +5,7 @@ import {
   Scan,
   Users,
   User,
+  ClipboardList,
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
@@ -48,6 +49,12 @@ export const sidebarByRole: Record<Role, SidebarItemConfig[]> = {
     },
 
     {
+      title: "Weekly Planning",
+      path: "/weekly-planning",
+      icon: ClipboardList,
+    },
+
+    {
       title: "Staff Management",
       path: "/staff",
       icon: Users,
@@ -75,6 +82,12 @@ export const sidebarByRole: Record<Role, SidebarItemConfig[]> = {
       title: "Scan QR Code",
       path: "/scan",
       icon: Scan,
+    },
+
+    {
+      title: "Weekly Planning",
+      path: "/weekly-planning",
+      icon: ClipboardList,
     },
 
     {

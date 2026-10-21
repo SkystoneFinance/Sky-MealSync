@@ -61,14 +61,32 @@ entitled to a meal, and management has no record of consumption per person or de
 | MENU-3 | See demand for any date: selection count and share per option. |
 | MENU-4 | **[Confirm]** SUPER_ADMIN currently cannot open Food Management (UI restriction only). |
 
-### 4.4 Meal selection (USER)
+### 4.4 Weekly meal planning
+
+Staff choose meals for **next week** so the kitchen can get budget approval and shop on Friday.
+All times are **Africa/Lagos**. The schedule lives in `mealSync/src/modules/mealPlan/schedule.ts`.
+
+| When (for a week starting Monday M) | What happens |
+|---|---|
+| Tuesday 00:00 before M | Chef dashboard shows a reminder to publish (until published) |
+| **Wednesday 17:00** before M | Menu due. Publishing later is allowed but flagged "Published late"; the banner turns red |
+| Chef publishes | Staff see a prominent "Next week's menu is ready" banner the next time they open the app. The chef copies a ready-made WhatsApp announcement |
+| **Thursday 17:00** before M | Deadline shown to staff |
+| Thursday 19:00 before M | **Hidden hard close.** Submissions between 17:00 and 19:00 are accepted silently (submission time is still recorded). After 19:00 nothing is accepted and the summary is **confirmed** |
+| Friday | Chef shops, using the confirmed summary |
+
 | ID | Requirement |
 |---|---|
-| SEL-1 | Staff see a Monday–Friday week and the options for each day, and can browse other weeks. |
-| SEL-2 | **One selection per staff per day.** |
-| SEL-3 | **Lock rule:** a day's selection can't be created, changed or removed once that day is today or past. **Exception: on Mondays, Monday's selection stays editable.** No time-of-day cutoff. **[Confirm]** whether a cutoff (e.g. 10:00 on the day, or Friday for next week) is wanted. |
-| SEL-4 | The UI requires all 5 days to be selected before saving the week. **[Confirm]** — this blocks staff who missed a day that is already locked. |
-| SEL-5 | The staff dashboard shows today's meal and progress for the week (X / 5). |
+| PLAN-1 | The chef creates dishes per date (Food Management), can mark days **Kitchen closed**, then **publishes** the week. Publishing requires at least one active dish on every open day. Closed days can't change after publishing. |
+| PLAN-2 | Staff can only choose for **next week**. The current week is read-only; there are no late submissions. |
+| PLAN-3 | For every open day, staff choose a dish **or "No meal required"**. A plan is submitted only when every open day has an answer. |
+| PLAN-4 | Staff can change their plan freely until the hard close. The original submission time is kept, and the last edit time is shown as "edited". |
+| PLAN-5 | Staff who don't submit get **no meals** that week and are listed as **"Did not submit"**, separately from "No meal required". |
+| PLAN-6 | **Meal Preparation Summary** (chef and SUPER_ADMIN): employees who submitted; per day, the count for each dish, meals required, "No meal required" and did-not-submit; the list of employees who didn't submit (marking those who never activated their login); each submitter's submission time. It is live until the hard close, then marked **Confirmed**. Exportable to Excel. |
+| PLAN-7 | At the scanner, staff who chose "No meal required" for today are refused with that reason. |
+| PLAN-8 | A dish that someone has chosen can't be deleted (disable it instead). |
+
+Notifications are in-app only (no email). The office also announces the menu on WhatsApp.
 
 ### 4.5 Serving (ADMIN; SUPER_ADMIN also has access)
 | ID | Requirement |
@@ -105,13 +123,14 @@ entitled to a meal, and management has no record of consumption per person or de
 
 ## 6. Open questions
 
-1. Where is the backend hosted, and who owns the Neon and Vercel accounts?
-2. Should selection lock at a specific time rather than at midnight? Should the Monday exception stay?
+1. ~~Where is the backend hosted?~~ Render. Who owns the Neon, Vercel and Render accounts?
+2. ~~Selection lock time / Monday exception?~~ Replaced by the weekly planning window (4.4).
 3. Is 3 servings per day correct? Should it count per meal period?
 4. Should staff be deleted or only deactivated?
 5. What is the process for a forgotten PIN?
 6. Should the admin screens show live updates when someone is served (the API already emits `attendance:new`)?
 
 ## 7. Change log for this document
+- 2026-10-21 — 4.4 rewritten: weekly meal planning (publish Wed 17:00, staff deadline Thu 17:00, hidden close Thu 19:00, "No meal required", chef summary). Replaces the day-by-day lock.
 - 2026-10-20 — AUTH-4/5: long-lived sliding sessions and logout.
 - 2026-09-30 — Initial version reverse-engineered from code.

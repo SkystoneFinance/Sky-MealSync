@@ -2,6 +2,7 @@ import DashboardHeader from "./DashboardHeader";
 import StatsSection from "./statsSection";
 import RecentAttendance from "./RecentAttendance";
 import DepartmentSummary from "./DepartmentSummary";
+import PlanningBanner from "../mealPlanning/PlanningBanner";
 
 import { useDashboard } from "../../hooks/useDashboard";
 import { useRecentAttendance } from "../../hooks/useRecentAttendance";
@@ -42,6 +43,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+
+      <PlanningBanner />
 
       <DashboardHeader />
 
