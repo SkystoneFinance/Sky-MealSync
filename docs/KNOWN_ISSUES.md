@@ -42,6 +42,9 @@ Severity: 🔴 fix soon · 🟠 important · 🟡 minor / cleanup
 | P3 | 🟡 | The Food Management "Meal Demand" card still exists alongside the new summary. Consider removing it. |
 | P4 | 🟡 | The dev database contains test data: staff `DEVTEST01` and `DEVTEST02` and "(dev test)" dishes for 26–29 Oct. |
 
+| P5 | 🟡 | Dish photos are matched by normalised name ("Fried rice & chicken" = "fried rice and chicken"), but differently worded names ("Fried rice with chicken") get separate photos. Keep dish names consistent. |
+| P6 | 🟡 | Once the switch-over is complete (~3 weeks from 2026-10-21), consider removing the image URL field and requiring a photo from a library of previous dishes. |
+
 ## Dead code / cleanup
 
 - **FE empty:** `src/lib/auth.ts`, `src/components/scan/scanResult.tsx`

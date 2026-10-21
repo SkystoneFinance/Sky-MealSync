@@ -8,6 +8,20 @@ export interface FoodOption {
   updatedAt: string;
 }
 
+// Today's dishes still needing our own photo + transition progress
+export interface DishPhotoStatus {
+  today: {
+    id: string;
+    name: string;
+    image: string;
+    hasOwnPhoto: boolean;
+  }[];
+  upcoming: {
+    total: number;
+    ownPhotos: number;
+  };
+}
+
 export interface FoodOptionsResponse {
   success: boolean;
   data: FoodOption[];

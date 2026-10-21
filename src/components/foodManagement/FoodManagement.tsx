@@ -20,6 +20,9 @@ import {
   PageLoader,
   WeekSwitcher,
 } from "../ui";
+import TakePhotoButton from "./TakePhotoButton";
+import TodayPhotos from "./TodayPhotos";
+import { isOwnDishPhoto, lagosTodayKey } from "../../utils/mealPlanDates";
 import DishModal from "./DishModal";
 import DishThumbnail from "./DishThumbnail";
 
@@ -160,6 +163,7 @@ export default function FoodManagement() {
       />
 
       <div className="space-y-6">
+        <TodayPhotos />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <WeekSwitcher
             label={weekLabel(days)}
@@ -245,10 +249,23 @@ export default function FoodManagement() {
                               {dish.name}
                             </p>
                             {!dish.isActive && <Badge>Disabled</Badge>}
+                            {isOwnDishPhoto(dish.image) ? (
+                              <Badge tone="success">Our photo</Badge>
+                            ) : (
+                              <Badge>Internet image</Badge>
+                            )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1 pl-15 sm:pl-0">
+                        <div className="flex flex-wrap items-center gap-1 pl-15 sm:pl-0">
+                          {/* A real photo can be taken from the day it's served */}
+                          {day <= lagosTodayKey() && (
+                            <TakePhotoButton
+                              dish={dish}
+                              retake={isOwnDishPhoto(dish.image)}
+                              variant={isOwnDishPhoto(dish.image) ? "ghost" : "secondary"}
+                            />
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"

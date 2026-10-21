@@ -26,6 +26,7 @@ import type {
 
 import {
   apiErrorMessage,
+  dishImageUrl,
   formatDay,
   formatDeadline,
   formatTimestamp,
@@ -467,7 +468,7 @@ function DishImage({
 
   return (
     <img
-      src={src}
+      src={dishImageUrl(src)}
       alt={alt}
       loading="lazy"
       onError={() => setFailed(true)}

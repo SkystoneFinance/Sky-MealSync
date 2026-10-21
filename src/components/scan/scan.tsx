@@ -28,7 +28,7 @@ import {
 import ScannerCard from "./scannerCard";
 import { useScan } from "../../hooks/useScan";
 import { useServeMeal } from "../../hooks/useServedMeal";
-import { apiErrorMessage } from "../../utils/mealPlanDates";
+import { apiErrorMessage, dishImageUrl } from "../../utils/mealPlanDates";
 import type {
   ScanPreview,
   ScannedMeal,
@@ -373,7 +373,7 @@ function MealSummary({ meal }: { meal: ScannedMeal }) {
     <div className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-zinc-50/60 p-3">
       {meal.image ? (
         <img
-          src={meal.image}
+          src={dishImageUrl(meal.image)}
           alt=""
           className="h-16 w-16 shrink-0 rounded-lg border border-zinc-200 bg-white object-cover"
         />

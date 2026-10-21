@@ -5,6 +5,7 @@ import type {
   FoodOptionsResponse,
   FoodOptionResponse,
   FoodOptionSummaryResponse,
+  DishPhotoStatus,
 } from "../types/foodOption";
 
 
@@ -14,7 +15,8 @@ import type {
 
 export interface CreateFoodOptionPayload {
   name: string;
-  image: string;
+  // Optional when we already have our own photo of this dish
+  image?: string;
   mealDate: string;
 }
 
@@ -36,6 +38,34 @@ export interface UpdateFoodOptionStatusPayload {
 // ==========================================
 
 export const foodOptionService = {
+
+  // ========================================
+  // OUR OWN DISH PHOTOS
+  // ========================================
+
+  async getPhotoStatus(): Promise<DishPhotoStatus> {
+    const res = await api.get<{ success: boolean; data: DishPhotoStatus }>(
+      "/food-options/photo-status"
+    );
+
+    return res.data.data;
+  },
+
+  async uploadPhoto(id: string, photo: Blob): Promise<FoodOption> {
+    const form = new FormData();
+    form.append("photo", photo, "dish.jpg");
+
+    const res = await api.post<FoodOptionResponse>(
+      `/food-options/${id}/photo`,
+      form,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 60000,
+      }
+    );
+
+    return res.data.data;
+  },
 
   // ========================================
   // GET ALL

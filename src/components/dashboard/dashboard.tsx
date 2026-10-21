@@ -4,6 +4,7 @@ import StatsSection from "./statsSection";
 import RecentAttendance from "./RecentAttendance";
 import DepartmentSummary from "./DepartmentSummary";
 import PlanningBanner from "../mealPlanning/PlanningBanner";
+import TodayPhotos from "../foodManagement/TodayPhotos";
 
 import { Callout, PageHeader } from "../ui";
 import { useDashboard } from "../../hooks/useDashboard";
@@ -50,6 +51,7 @@ export default function Dashboard() {
       <PageHeader eyebrow={greeting(now)} title="Overview" description={today} />
 
       <PlanningBanner />
+      <TodayPhotos />
 
       {stats.isError && (
         <Callout tone="danger" title="Couldn't load today's numbers">

@@ -91,3 +91,27 @@ export function weekRangeLabel(weekStart: string) {
     ? `${day(start)}–${day(end)} ${month(end)}`
     : `${day(start)} ${month(start)} – ${day(end)} ${month(end)}`;
 }
+
+// Dish images are either pasted outside URLs or our own photos served by
+// the API (stored as "/api/v1/dish-photos/…"). Turn the latter into a full URL.
+const API_ORIGIN = (() => {
+  try {
+    return new URL(import.meta.env.VITE_API_URL).origin;
+  } catch {
+    return "";
+  }
+})();
+
+export function dishImageUrl(image: string | null | undefined) {
+  if (!image) return "";
+  return image.startsWith("/api/") ? `${API_ORIGIN}${image}` : image;
+}
+
+export function isOwnDishPhoto(image: string | null | undefined) {
+  return Boolean(image?.startsWith("/api/v1/dish-photos/"));
+}
+
+// Today's date in Lagos as "YYYY-MM-DD"
+export function lagosTodayKey() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: TIME_ZONE });
+}

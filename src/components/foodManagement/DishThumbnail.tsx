@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ImageOff } from "lucide-react";
 
 import { cn } from "../ui";
+import { dishImageUrl } from "../../utils/mealPlanDates";
 
 // Rounded, cropped dish image that falls back to a neutral tile when the
 // URL is empty or fails to load. Remount with `key={src}` to retry on change.
@@ -33,7 +34,7 @@ export default function DishThumbnail({
 
   return (
     <img
-      src={src}
+      src={dishImageUrl(src)}
       alt={alt}
       loading="lazy"
       onError={() => setFailed(true)}

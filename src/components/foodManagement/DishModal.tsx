@@ -8,7 +8,7 @@ import {
   useCreateFoodOption,
   useUpdateFoodOption,
 } from "../../hooks/useFoodOptions";
-import { apiErrorMessage } from "../../utils/mealPlanDates";
+import { apiErrorMessage, isOwnDishPhoto } from "../../utils/mealPlanDates";
 
 import type { FoodOption } from "../../types/foodOption";
 
@@ -18,26 +18,13 @@ interface Errors {
   mealDate?: string;
 }
 
-function isHttpUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function validate(name: string, image: string, mealDate: string): Errors {
+// The image is optional here: the server uses our own photo when it has one
+// for this dish name, and asks for a URL otherwise.
+function validate(name: string, _image: string, mealDate: string): Errors {
   const errors: Errors = {};
 
   if (name.trim().length < 2) {
     errors.name = "Enter a dish name of at least 2 characters.";
-  }
-
-  if (!image.trim()) {
-    errors.image = "Add an image URL.";
-  } else if (!isHttpUrl(image.trim())) {
-    errors.image = "Enter a valid http(s) URL.";
   }
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(mealDate)) {
@@ -89,7 +76,7 @@ export default function DishModal({
 
     const payload = {
       name: name.trim(),
-      image: image.trim(),
+      image: image.trim() || undefined,
       mealDate,
     };
 
@@ -112,7 +99,10 @@ export default function DishModal({
     }
   };
 
-  const previewUrl = isHttpUrl(image.trim()) ? image.trim() : "";
+  const previewUrl = image.trim();
+  // Editing a dish that already uses our own photo (and keeping its name)
+  const usesOwnPhoto =
+    isOwnDishPhoto(dish?.image) && name.trim() === dish?.name.trim();
 
   return (
     <Modal
@@ -155,15 +145,16 @@ export default function DishModal({
           />
         </Field>
 
+        {!usesOwnPhoto && (
         <Field
           label="Image URL"
           htmlFor="dish-image"
           error={errors.image}
-          hint="Paste a link to a photo of the dish."
+          hint="Paste a link to a picture of the dish. Not needed if we already have our own photo of a dish with this name. On the day, you'll be asked to replace it with a real photo."
         >
           <Input
             id="dish-image"
-            type="url"
+            type="text"
             inputMode="url"
             value={image}
             placeholder="https://…"
@@ -174,6 +165,7 @@ export default function DishModal({
             }}
           />
         </Field>
+        )}
 
         <div className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
           <DishThumbnail
@@ -183,11 +175,15 @@ export default function DishModal({
             className="h-20 w-20 sm:h-24 sm:w-24"
           />
           <div className="min-w-0 text-sm">
-            <p className="font-medium text-zinc-900">Preview</p>
+            <p className="font-medium text-zinc-900">
+              {usesOwnPhoto ? "Our photo" : "Preview"}
+            </p>
             <p className="mt-0.5 text-zinc-500">
-              {previewUrl
-                ? "This is how the photo will appear."
-                : "A preview appears once you add a valid image URL."}
+              {usesOwnPhoto
+                ? "Used automatically every time this dish is on the menu."
+                : previewUrl
+                  ? "This is how the picture will appear."
+                  : "A preview appears once you add an image URL."}
             </p>
           </div>
         </div>

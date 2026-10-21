@@ -20,6 +20,8 @@ Sections: **Added** · **Changed** · **Fixed** · **Removed** · **Security**
 - Staff home shows today's meal and the status of the next two weeks.
 - Staff can be edited and activated or deactivated from the Staff page.
 - Served today shows the dish each person chose, and search matches dish names.
+- **Dish photos**: on the day, the Overview and Menu ask the chef to photograph each of today's dishes (opens the phone camera; photos are resized before upload). A photo replaces the internet image for every dish with that name, with progress shown ("X of Y upcoming dishes use our photos"). Menu rows show "Our photo" / "Internet image".
+- Pasted image URLs no longer have to start with http(s), and are optional when we already have a photo of the dish.
 
 ### Removed
 - framer-motion animations, react-icons, the old Navbar/Sidebar and unused files (`App.tsx`, `pages/DashboardEntry.tsx`, `utils/download.ts`, unused history/report components and hooks, OTP types, `tailwind.config.ts`).

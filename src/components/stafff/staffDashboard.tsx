@@ -16,6 +16,7 @@ import { useMyPlanStatus } from "../../hooks/useMealPlan";
 import MealPlanBanner from "../mealplan/MealPlanBanner";
 
 import {
+  dishImageUrl,
   formatDeadline,
   formatTimestamp,
   weekRangeLabel,
@@ -83,7 +84,7 @@ export default function StaffDashboard() {
               <>
                 {today.foodOption.image ? (
                   <img
-                    src={today.foodOption.image}
+                    src={dishImageUrl(today.foodOption.image)}
                     alt=""
                     className="h-20 w-20 shrink-0 rounded-xl bg-zinc-100 object-cover"
                   />
