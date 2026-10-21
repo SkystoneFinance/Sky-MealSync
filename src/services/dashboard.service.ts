@@ -5,7 +5,6 @@ import type { ApiResponse } from "../types/api";
 import type {
   DashboardStats,
   RecentAttendance,
-  DepartmentSummary,
 } from "../types/dashboard";
 
 export const dashboardService = {
@@ -21,14 +20,6 @@ export const dashboardService = {
     const response = await axios.get<
       ApiResponse<RecentAttendance[]>
     >("/dashboard/recent-attendance");
-
-    return response.data.data;
-  },
-
-  async getDepartmentSummary() {
-    const response = await axios.get<
-      ApiResponse<DepartmentSummary[]>
-    >("/dashboard/department-summary");
 
     return response.data.data;
   },

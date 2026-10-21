@@ -15,7 +15,6 @@ export function useServeMeal() {
       queryClient.invalidateQueries({ queryKey: TODAY_ATTENDANCE_KEY });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.recentAttendance });
-      queryClient.invalidateQueries({ queryKey: queryKeys.departmentSummary });
     },
   });
 }

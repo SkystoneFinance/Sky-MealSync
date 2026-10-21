@@ -7,11 +7,6 @@ export interface DashboardStats {
   remainingStaff: number;
 }
 
-export interface DepartmentSummary {
-  department: string;
-  total: number;
-}
-
 export interface RecentAttendance {
   id: string;
   mealDate: string;
@@ -23,6 +18,8 @@ export interface RecentAttendance {
     firstName: string;
     lastName: string;
     department: string;
-    qrImage: string;
   };
+
+  // The dish served (their selection for the day), if any
+  meal: { id: string; name: string; image: string } | null;
 }

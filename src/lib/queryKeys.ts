@@ -3,7 +3,6 @@ export const queryKeys = {
 
   recentAttendance: ["recent-attendance"],
 
-  departmentSummary: ["department-summary"],
 
   staff: ["staff"],
 

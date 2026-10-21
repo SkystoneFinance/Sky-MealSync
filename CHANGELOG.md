@@ -10,6 +10,11 @@ Sections: **Added** · **Changed** · **Fixed** · **Removed** · **Security**
 ## [Unreleased]
 
 ### Changed
+- Overview: removed "Staff by department"; "Recent servings" now shows the dish each person was served, full width.
+
+## 2026-10-21
+
+### Changed
 - **Complete UI redesign** ("clean & light"): new shared UI kit (`src/components/ui`), new app shell (white sidebar with role-based navigation and a user card with logout, mobile top bar and drawer), and every screen rebuilt: sign-in, staff home, My meals, My QR code, Overview, Weekly planning, Menu, Scan, Served today, Reports, Staff.
 - Font is now Futura (falls back to Jost, an open-source Futura revival, where Futura isn't installed). Only the Skystone logo, name and red (#B10F16) were kept.
 - Navigation renamed per role: staff see Home, My meals and My QR code; the kitchen sees Overview, Weekly planning, Menu, Scan and Served today; administrators see Overview, Weekly planning, Served today, Reports, Scan and Staff.
@@ -26,7 +31,6 @@ Sections: **Added** · **Changed** · **Fixed** · **Removed** · **Security**
 ### Removed
 - framer-motion animations, react-icons, the old Navbar/Sidebar and unused files (`App.tsx`, `pages/DashboardEntry.tsx`, `utils/download.ts`, unused history/report components and hooks, OTP types, `tailwind.config.ts`).
 
-## 2026-10-21
 
 ### Added
 - **Weekly meal planning.** Staff choose next week's meals (or "No meal required") on Select Meal, prompted by a prominent banner on their home page once the menu is published. A new **Weekly Planning** page (chef and SUPER_ADMIN) handles closed days, publishing, a copyable WhatsApp announcement, and the Meal Preparation Summary with Excel export. Dashboard banners remind the chef to publish (from Tuesday) and announce when the week is confirmed.
