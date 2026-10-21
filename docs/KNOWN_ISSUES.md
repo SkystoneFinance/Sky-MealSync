@@ -9,13 +9,9 @@ Severity: 🔴 fix soon · 🟠 important · 🟡 minor / cleanup
 
 | # | Sev | Where | Issue |
 |---|---|---|---|
-| S1 | 🔴 | BE `staff`, `attendance`, `dashboard`, `reports` routes | **No authentication on the server.** Anyone who knows the API URL can list, create, edit or delete staff, record servings, and download reports. The UI hides these screens, but the API does not check. Add `authenticate` + `authorize(...)` preHandlers. |
-| S2 | 🔴 | Environment | **Local development used the production database.** A Neon dev child branch now exists (2026-10-20). Make sure every local `.env` points at it. |
-| S3 | 🔴 | Render env | `JWT_SECRET` falls back to a hard-coded string, and **confirmed 2026-10-20: it is not set on Render**. Production tokens are signed with the default string in the source code, so anyone with repo access can forge admin tokens. The code fix (refuse to start without it) is in `feature/sliding-sessions`. **Set `JWT_SECRET` on Render before merging**, or the deploy will fail to start. |
 | S4 | 🟡 | BE auth | No server-side token revocation. A stolen token works until it expires (90 days), unless the account is deactivated, which blocks refresh but not the current token. |
 | S5 | 🟠 | BE `staffAuth` | 4-digit PIN with **no rate limiting or lockout**, so it can be brute-forced. |
 | S6 | 🟠 | BE `mealSelection` PATCH/DELETE `/:id` | Doesn't check that the selection belongs to the caller, so any logged-in user can change anyone's selection by ID. |
-| S7 | 🔴 | BE `prisma/seed.ts` / production data | Seeds three accounts with a shared password that is visible in the **public** repo. **Confirmed 2026-10-20:** `admin@mealsync.com` (SUPER_ADMIN) logs in with it on the dev branch, which is a copy of production, so it very likely works in production too. Change the password or deactivate these accounts in production now. |
 | S8 | 🟡 | FE `.env` | `.env` is committed and not in `.gitignore`. It only holds `VITE_API_URL` (not secret), but add `.env` to `.gitignore` before secrets land there. |
 | S9 | 🟡 | FE | JWT kept in `localStorage` (XSS exposure). Role is trusted from `localStorage` until `/me` returns. |
 | S10 | 🟡 | FE Navbar | Hotlinks an avatar image from a third-party site on every page load. |
@@ -24,7 +20,6 @@ Severity: 🔴 fix soon · 🟠 important · 🟡 minor / cleanup
 
 | # | Sev | Where | Issue |
 |---|---|---|---|
-| F1 | 🔴 | FE app root | **No `<Toaster />` is mounted**, so every `react-hot-toast` message is invisible: login errors, scan results, max-serving errors, import results. |
 | F3 | 🟠 | FE `mealplan/weeklyplan.tsx` | Submitting needs all 5 days, but past days are locked. A staff member who missed a day can't save the rest of the week. Locked days are also re-sent on submit. |
 | F4 | 🟠 | FE `weeklyplan.tsx` | `submitted` never resets when changing week, so the button stays disabled. The spinner ignores the update mutation. |
 | F5 | 🟠 | FE `stafff/staffTable.tsx:77` | Staff **Edit button does nothing**. There's no UI to activate or deactivate staff, though the API supports it. |
@@ -54,6 +49,11 @@ Severity: 🔴 fix soon · 🟠 important · 🟡 minor / cleanup
 
 | Was | Fixed | Change |
 |---|---|---|
+| S1 No authentication on staff, attendance, dashboard and reports API routes | 2026-10-21 | `fix/api-auth-and-toasts`: staff management requires SUPER_ADMIN; attendance, dashboard and reports require ADMIN or SUPER_ADMIN |
+| F1 No `<Toaster />` mounted, so pop-up messages never showed | 2026-10-21 | `fix/api-auth-and-toasts` |
+| S2 Local development used the production database | 2026-10-20 | Neon dev child branch |
+| S3 `JWT_SECRET` unset on Render / public default | 2026-10-20 | Set on Render; server now refuses to start without it (PR #1) |
+| S7 Seed accounts with the public password in production | 2026-10-20 | Passwords changed directly in production |
 | F2 No logout button | 2026-10-20 | `feature/sliding-sessions`: Log out in the sidebar |
 | F15 No 401 handling; cache not cleared on logout | 2026-10-20 | `feature/sliding-sessions` |
 | S4 (part) JWTs never expired | 2026-10-20 | `feature/sliding-sessions`: 90-day sliding expiry |

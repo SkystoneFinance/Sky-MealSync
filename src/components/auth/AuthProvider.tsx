@@ -181,8 +181,16 @@ export default function AuthProvider({
           storedUser?.role === "USER"
         ) {
 
-          const staff =
+          const profile =
             await authService.staffMe();
+
+          // /staff-auth/me returns the profile without role or
+          // staffId; without them the app treats staff as admins
+          const staff = {
+            ...profile,
+            staffId: profile.id,
+            role: "USER",
+          } as StaffUser;
 
           setUser(staff);
 
