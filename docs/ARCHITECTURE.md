@@ -28,9 +28,9 @@ from the frontend env var `VITE_API_URL`.
 
 | Role | Who | Logs in with | Can do |
 |---|---|---|---|
-| `SUPER_ADMIN` | HR / system owner | email + password | Dashboard, who has eaten, history & reports, scan, **staff management** |
-| `ADMIN` | Kitchen / chef | email + password | Dashboard, who has eaten, scan, **food (menu) management** |
-| `USER` | Any employee | staff number + 4-digit PIN | Own dashboard, **weekly meal selection**, profile & personal QR code |
+| `SUPER_ADMIN` | HR / system owner | email + password | Overview, weekly planning, served today, reports, scan, **staff** |
+| `ADMIN` | Kitchen / chef | email + password | Overview, weekly planning, **menu**, scan, served today |
+| `USER` | Any employee | staff number + 4-digit PIN | Home, **my meals** (choose up to 2 weeks ahead, view past weeks), my QR code |
 
 Admin accounts are created directly in the database (see `prisma/seed.ts` in the backend). Staff records are created
 by a SUPER_ADMIN; staff then activate their own login.
@@ -106,21 +106,26 @@ Endpoint list: backend [`docs/API.md`](https://github.com/SkystoneFinance/mealSy
 
 ```
 src/
-  main.tsx                 BrowserRouter > QueryProvider > AuthProvider > AppRoutes
+  main.tsx                 BrowserRouter > QueryProvider > AuthProvider > AppRoutes (+ Toaster)
+  index.css                design tokens (@theme): Futura font stack, brand-50…900 reds, shadows
   app/routes/AppRoutes.tsx all routes + role guards              ← start here
-  app/layout/              AdminLayout (Sidebar + Navbar + Outlet)
-  config/sidebar.ts        menu items per role
-  lib/axios.ts             API client (VITE_API_URL, bearer token)
-  lib/queryClient.ts       React Query defaults (retry 2, 5-min staleTime)
+  app/layout/AppShell.tsx  sidebar / mobile drawer, user card, page container
+  config/sidebar.ts        navigation items and role labels
+  components/ui/           UI kit: Button, Card, PageHeader, Badge, StatCard, Callout, Field, Input,
+                           Select, Segmented, WeekSwitcher, Table, Avatar, Modal, EmptyState…
+  lib/axios.ts             API client (VITE_API_URL, bearer token, 401 → logout)
+  lib/session.ts           token storage + sliding refresh
   services/*.service.ts    one file per backend module; plain axios calls
   hooks/use*.ts            React Query wrappers around services
   types/                   API/DTO types
-  components/<feature>/    screens: auth, dashboard, scan, attendance, history,
-                           stafff (staff mgmt + staff dashboard + profile), foodManagement,
-                           mealplan (staff weekly plan + banner), mealPlanning (chef weekly planning + banner)
+  utils/mealPlanDates.ts   week/date formatting (Africa/Lagos) and API error messages
+  components/<feature>/    screens: auth, dashboard (Overview), mealplan (My meals + banner),
+                           mealPlanning (Weekly planning + banner), foodManagement (Menu), scan,
+                           attendance (Served today), history (Reports), stafff (Staff, staff home, My QR code)
 ```
 
 Pattern for a feature: `component → hook (useQuery/useMutation) → service (axios) → backend route`.
+New screens should be built from `components/ui` so the app stays consistent.
 
 ## Environments and deployment
 

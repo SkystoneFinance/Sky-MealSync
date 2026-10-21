@@ -52,3 +52,42 @@ export function apiErrorMessage(
 
   return message ?? fallback;
 }
+
+// Move a "YYYY-MM-DD" Monday by whole weeks
+export function shiftWeek(weekStart: string, weeks: number) {
+  const date = new Date(`${weekStart}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + weeks * 7);
+  return date.toISOString().slice(0, 10);
+}
+
+export function weeksBetween(from: string, to: string) {
+  const ms =
+    new Date(`${to}T00:00:00.000Z`).getTime() -
+    new Date(`${from}T00:00:00.000Z`).getTime();
+  return Math.round(ms / (7 * 24 * 60 * 60 * 1000));
+}
+
+// Label a week relative to next week: "This week", "Next week", "In 2 weeks", "3 weeks ago"
+export function relativeWeekLabel(weekStart: string, nextWeekStart: string) {
+  const offset = weeksBetween(nextWeekStart, weekStart) + 1; // 0 = this week
+
+  if (offset === 0) return "This week";
+  if (offset === 1) return "Next week";
+  if (offset === -1) return "Last week";
+  if (offset > 1) return `In ${offset} weeks`;
+  return `${-offset} weeks ago`;
+}
+
+// "Week of 26 Oct" / "26–30 Oct"
+export function weekRangeLabel(weekStart: string) {
+  const start = new Date(`${weekStart}T00:00:00.000Z`);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 4);
+
+  const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", timeZone: "UTC" });
+  const month = (d: Date) => d.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+
+  return month(start) === month(end)
+    ? `${day(start)}–${day(end)} ${month(end)}`
+    : `${day(start)} ${month(start)} – ${day(end)} ${month(end)}`;
+}

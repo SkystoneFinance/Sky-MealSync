@@ -1,123 +1,52 @@
 import {
-  LayoutDashboard,
+  CalendarRange,
+  ChartColumn,
+  ChefHat,
+  ClipboardCheck,
+  House,
+  QrCode,
+  ScanLine,
+  UsersRound,
   UtensilsCrossed,
-  History,
-  Scan,
-  Users,
-  User,
-  ClipboardList,
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
 
 import type { Role } from "../types/auth";
 
-export interface SidebarItemConfig {
+export interface NavItem {
   title: string;
   path: string;
   icon: LucideIcon;
 }
 
-export const sidebarByRole: Record<Role, SidebarItemConfig[]> = {
-  // ==================================
-  // SUPER ADMIN
-  // ==================================
+export const ROLE_LABEL: Record<Role, string> = {
+  SUPER_ADMIN: "Administrator",
+  ADMIN: "Kitchen",
+  USER: "Staff",
+};
 
+export const navByRole: Record<Role, NavItem[]> = {
   SUPER_ADMIN: [
-    {
-      title: "Dashboard",
-      path: "/",
-      icon: LayoutDashboard,
-    },
-
-    {
-      title: "Check Who Have Eaten",
-      path: "/check-meal",
-      icon: UtensilsCrossed,
-    },
-
-    {
-      title: "History",
-      path: "/history",
-      icon: History,
-    },
-
-    {
-      title: "Scan QR Code",
-      path: "/scan",
-      icon: Scan,
-    },
-
-    {
-      title: "Weekly Planning",
-      path: "/weekly-planning",
-      icon: ClipboardList,
-    },
-
-    {
-      title: "Staff Management",
-      path: "/staff",
-      icon: Users,
-    },
+    { title: "Overview", path: "/", icon: House },
+    { title: "Weekly planning", path: "/weekly-planning", icon: CalendarRange },
+    { title: "Served today", path: "/check-meal", icon: ClipboardCheck },
+    { title: "Reports", path: "/history", icon: ChartColumn },
+    { title: "Scan", path: "/scan", icon: ScanLine },
+    { title: "Staff", path: "/staff", icon: UsersRound },
   ],
-
-  // ==================================
-  // ADMIN
-  // ==================================
 
   ADMIN: [
-    {
-      title: "Dashboard",
-      path: "/",
-      icon: LayoutDashboard,
-    },
-
-    {
-      title: "Check Who Have Eaten",
-      path: "/check-meal",
-      icon: UtensilsCrossed,
-    },
-
-    {
-      title: "Scan QR Code",
-      path: "/scan",
-      icon: Scan,
-    },
-
-    {
-      title: "Weekly Planning",
-      path: "/weekly-planning",
-      icon: ClipboardList,
-    },
-
-    {
-      title: "Food Management",
-      path: "/food-management",
-      icon: User,
-    },
+    { title: "Overview", path: "/", icon: House },
+    { title: "Weekly planning", path: "/weekly-planning", icon: CalendarRange },
+    { title: "Menu", path: "/food-management", icon: ChefHat },
+    { title: "Scan", path: "/scan", icon: ScanLine },
+    { title: "Served today", path: "/check-meal", icon: ClipboardCheck },
   ],
 
-  // ==================================
-  // NORMAL USER / STAFF
-  // ==================================
-
   USER: [
-    {
-      title: "Dashboard",
-      path: "/",
-      icon: LayoutDashboard,
-    },
-
-    {
-      title: "Select Meal",
-      path: "/meal-plan",
-      icon: UtensilsCrossed,
-    },
-
-    {
-      title: "My Profile",
-      path: "/my-profile",
-      icon: User,
-    },
+    { title: "Home", path: "/", icon: House },
+    { title: "My meals", path: "/meal-plan", icon: UtensilsCrossed },
+    { title: "My QR code", path: "/my-profile", icon: QrCode },
   ],
 };

@@ -1,25 +1,27 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import toast from "react-hot-toast";
 
 import {
   Ban,
-  CalendarClock,
   Check,
-  CheckCircle2,
-  Loader2,
+  CircleCheck,
+  Clock,
   Lock,
   Store,
+  UtensilsCrossed,
 } from "lucide-react";
 
 import {
   useMyMealPlan,
+  useMyPlanStatus,
   useSubmitMealPlan,
 } from "../../hooks/useMealPlan";
 
 import type {
   DayChoice,
   PlanDay,
+  StaffMealPlan,
 } from "../../types/mealPlan";
 
 import {
@@ -27,62 +29,266 @@ import {
   formatDay,
   formatDeadline,
   formatTimestamp,
+  relativeWeekLabel,
+  shiftWeek,
+  weekRangeLabel,
+  weeksBetween,
 } from "../../utils/mealPlanDates";
+
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  PageHeader,
+  PageLoader,
+  WeekSwitcher,
+  cn,
+} from "../ui";
 
 // Local choice per day: a food option id, or NO_MEAL
 const NO_MEAL = "no-meal";
 
+// How far back staff can browse their history
+const HISTORY_WEEKS = 12;
+
 type Choices = Record<string, string>;
 
 export default function WeeklyMealPlan() {
-  const { data: plan, isLoading, isError } = useMyMealPlan();
-  const submitPlan = useSubmitMealPlan();
+  const { data: status } = useMyPlanStatus();
+  const nextWeek = status?.[0]?.weekStart;
+  const lastPlanningWeek = status?.[status.length - 1]?.weekStart;
 
-  // Edits on top of what is saved on the server
+  const [week, setWeek] = useState<string>();
+
+  // Start on the first open week the user hasn't submitted, else next week
+  useEffect(() => {
+    if (!status || week) return;
+
+    const pending = status.find((w) => w.isOpen && !w.submittedAt);
+    setWeek(pending?.weekStart ?? status[0]?.weekStart);
+  }, [status, week]);
+
+  const { data: plan, isLoading, isError } = useMyMealPlan(week);
+
+  if (!week || !nextWeek || !lastPlanningWeek) {
+    return <PageLoader />;
+  }
+
+  const offset = weeksBetween(nextWeek, week);
+
+  return (
+    <div>
+      <PageHeader
+        title="My meals"
+        description="Choose your lunch for the weeks ahead and look back at what you picked."
+        actions={
+          <WeekSwitcher
+            label={weekRangeLabel(week)}
+            sublabel={relativeWeekLabel(week, nextWeek)}
+            onPrevious={() => setWeek(shiftWeek(week, -1))}
+            onNext={() => setWeek(shiftWeek(week, 1))}
+            canPrevious={offset > -HISTORY_WEEKS}
+            canNext={week < lastPlanningWeek}
+          />
+        }
+      />
+
+      {isLoading || !plan ? (
+        isError ? (
+          <Callout tone="danger" title="We couldn't load this week">
+            Check your connection and try again.
+          </Callout>
+        ) : (
+          <PageLoader />
+        )
+      ) : (
+        <WeekView key={week} plan={plan} />
+      )}
+    </div>
+  );
+}
+
+function WeekView({ plan }: { plan: StaffMealPlan }) {
+  return (
+    <div className="space-y-6">
+      <WeekStatus plan={plan} />
+
+      {plan.week.isOpen ? (
+        <PlanEditor plan={plan} />
+      ) : (
+        plan.selections.length > 0 && <ReadOnlyWeek plan={plan} />
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// STATUS
+// ==========================================
+
+function WeekStatus({ plan }: { plan: StaffMealPlan }) {
+  const { week, submission, selections } = plan;
+
+  if (week.isOpen && !submission) {
+    return (
+      <Callout
+        tone="brand"
+        icon={<Clock size={18} />}
+        title={`Choose by ${formatDeadline(week.deadline)}`}
+      >
+        Pick a meal, or "No meal required", for each day. If you don't
+        submit, no meals are booked for you this week.
+      </Callout>
+    );
+  }
+
+  if (week.isOpen && submission) {
+    return (
+      <Callout
+        tone="success"
+        icon={<CircleCheck size={18} />}
+        title={`Submitted ${formatTimestamp(submission.submittedAt)}`}
+      >
+        You can change your choices until {formatDeadline(week.deadline)}.
+      </Callout>
+    );
+  }
+
+  if (week.isPlanningWeek && !week.isPublished) {
+    return (
+      <Card className="p-0">
+        <div className="flex flex-col items-center px-6 py-14 text-center">
+          <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-zinc-100 text-zinc-500">
+            <UtensilsCrossed size={20} />
+          </span>
+          <p className="font-medium text-zinc-900">The menu isn't out yet</p>
+          <p className="mt-1 max-w-sm text-sm text-zinc-500">
+            The kitchen publishes each week's menu by the Wednesday before.
+            You'll see a reminder on your home page when it's ready.
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (week.isPublished && submission) {
+    return (
+      <Callout tone="neutral" icon={<Lock size={18} />} title="Selection closed">
+        These are your meals for the week. Submitted {formatTimestamp(submission.submittedAt)}.
+      </Callout>
+    );
+  }
+
+  if (week.isPublished && !submission) {
+    return (
+      <Callout tone="neutral" icon={<Lock size={18} />} title="You didn't choose meals for this week">
+        Selection has closed, so no meals were booked for you.
+      </Callout>
+    );
+  }
+
+  if (selections.length === 0) {
+    return (
+      <Card className="p-0">
+        <div className="flex flex-col items-center px-6 py-14 text-center">
+          <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-zinc-100 text-zinc-500">
+            <UtensilsCrossed size={20} />
+          </span>
+          <p className="font-medium text-zinc-900">No meals for this week</p>
+          <p className="mt-1 text-sm text-zinc-500">You didn't choose any meals.</p>
+        </div>
+      </Card>
+    );
+  }
+
+  return null;
+}
+
+// ==========================================
+// READ-ONLY WEEK
+// ==========================================
+
+function ReadOnlyWeek({ plan }: { plan: StaffMealPlan }) {
+  const byDate = new Map(plan.selections.map((s) => [s.date, s]));
+
+  return (
+    <Card className="divide-y divide-zinc-100">
+      {plan.days.map((day) => {
+        const choice = byDate.get(day.date);
+
+        return (
+          <div key={day.date} className="flex items-center gap-4 px-5 py-4">
+            <div className="w-28 shrink-0">
+              <p className="text-sm font-semibold text-zinc-900">
+                {formatDay(day.date, { weekday: "long" })}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {formatDay(day.date, { day: "numeric", month: "short" })}
+              </p>
+            </div>
+
+            {day.closed ? (
+              <DayNote icon={<Store size={16} />}>Kitchen closed</DayNote>
+            ) : choice?.noMeal ? (
+              <DayNote icon={<Ban size={16} />}>No meal</DayNote>
+            ) : choice?.dish ? (
+              <div className="flex min-w-0 items-center gap-3">
+                <DishImage src={choice.dish.image} alt="" className="h-11 w-11 rounded-lg" />
+                <p className="truncate font-medium text-zinc-900">{choice.dish.name}</p>
+              </div>
+            ) : (
+              <DayNote>Nothing chosen</DayNote>
+            )}
+          </div>
+        );
+      })}
+    </Card>
+  );
+}
+
+function DayNote({
+  icon,
+  children,
+}: {
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <p className="flex items-center gap-2 text-sm text-zinc-500">
+      {icon}
+      {children}
+    </p>
+  );
+}
+
+// ==========================================
+// EDITOR (open weeks)
+// ==========================================
+
+function PlanEditor({ plan }: { plan: StaffMealPlan }) {
+  const { week, days, submission } = plan;
+  const submitPlan = useSubmitMealPlan();
   const [edits, setEdits] = useState<Choices>({});
 
   const saved: Choices = useMemo(() => {
     const result: Choices = {};
 
-    for (const s of plan?.selections ?? []) {
-      result[s.date] = s.noMeal
-        ? NO_MEAL
-        : (s.foodOptionId ?? "");
+    for (const s of plan.selections) {
+      result[s.date] = s.noMeal ? NO_MEAL : (s.foodOptionId ?? "");
     }
 
     return result;
   }, [plan]);
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="animate-spin" size={30} />
-      </div>
-    );
-  }
-
-  if (isError || !plan) {
-    return (
-      <div className="rounded-2xl bg-red-50 p-6 text-sm text-red-600">
-        Unable to load next week's menu. Please refresh the page.
-      </div>
-    );
-  }
-
-  const { week, days, submission } = plan;
-  const openDays = days.filter((d) => !d.closed);
   const choices: Choices = { ...saved, ...edits };
-
-  const missingDay = openDays.find((d) => !choices[d.date]);
-  const hasChanges = openDays.some(
-    (d) => choices[d.date] !== saved[d.date]
-  );
+  const openDays = days.filter((d) => !d.closed);
+  const remaining = openDays.filter((d) => !choices[d.date]);
+  const hasChanges = openDays.some((d) => choices[d.date] !== saved[d.date]);
 
   const handleSubmit = () => {
-    if (missingDay) {
-      toast.error(
-        `Please choose a meal or "No meal required" for ${formatDay(missingDay.date)}.`
-      );
+    if (remaining.length) {
+      toast.error(`Choose a meal or "No meal required" for ${formatDay(remaining[0].date)}.`);
       return;
     }
 
@@ -97,291 +303,175 @@ export default function WeeklyMealPlan() {
       {
         onSuccess: () => {
           setEdits({});
-          toast.success(
-            submission
-              ? "Your meal plan has been updated."
-              : "Your meal plan has been submitted."
-          );
+          toast.success(submission ? "Your changes are saved." : "Your meals are submitted.");
         },
-        onError: (error) => {
-          toast.error(apiErrorMessage(error));
-        },
+        onError: (error) => toast.error(apiErrorMessage(error)),
       }
     );
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
-      {/* HEADER */}
-
-      <div>
-        <p className="text-sm font-medium text-slate-500">
-          Next week's meals
-        </p>
-
-        <h1 className="mt-1 text-2xl font-bold text-gray-900">
-          Week of {formatDay(week.weekStart, { day: "numeric", month: "long" })}
-        </h1>
-
-        {week.isOpen && (
-          <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-[#B10F16]">
-            <CalendarClock size={16} />
-            Choose by {formatDeadline(week.deadline)}
-          </p>
-        )}
+    <>
+      <div className="space-y-4">
+        {days.map((day) => (
+          <DayPicker
+            key={day.date}
+            day={day}
+            choice={choices[day.date]}
+            onChoose={(value) => setEdits((current) => ({ ...current, [day.date]: value }))}
+          />
+        ))}
       </div>
 
-      {/* STATUS */}
-
-      <PlanStatus
-        isPublished={week.isPublished}
-        isOpen={week.isOpen}
-        submittedAt={submission?.submittedAt}
-        updatedAt={submission?.updatedAt}
-      />
-
-      {/* DAYS */}
-
-      {week.isPublished && (
-        <div className="space-y-6">
-          {days.map((day) => (
-            <DayCard
-              key={day.date}
-              day={day}
-              choice={choices[day.date]}
-              readOnly={!week.isOpen}
-              onChoose={(value) =>
-                setEdits((current) => ({
-                  ...current,
-                  [day.date]: value,
-                }))
-              }
-            />
-          ))}
-        </div>
-      )}
-
-      {/* SUBMIT */}
-
-      {week.isOpen && (
-        <div className="sticky bottom-4 flex flex-col items-end gap-2 border-t border-gray-200 bg-[#f5f5f5]/90 pt-4 backdrop-blur">
-          {missingDay && (
-            <p className="text-xs text-slate-500">
-              {openDays.filter((d) => !choices[d.date]).length} day(s) left to choose
-            </p>
-          )}
-
-          <button
-            type="button"
-            disabled={
-              submitPlan.isPending ||
-              (Boolean(submission) && !hasChanges)
-            }
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-zinc-200 bg-white/90 px-4 py-3 backdrop-blur sm:bottom-4 sm:mx-0 sm:rounded-xl sm:border sm:shadow-pop">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-zinc-600">
+            {remaining.length
+              ? `${openDays.length - remaining.length} of ${openDays.length} days chosen`
+              : submission && !hasChanges
+                ? "All set"
+                : "Ready to submit"}
+          </p>
+          <Button
             onClick={handleSubmit}
-            className="flex items-center gap-2 rounded-xl bg-[#B10F16] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#920c12] disabled:cursor-not-allowed disabled:opacity-50"
+            loading={submitPlan.isPending}
+            disabled={Boolean(submission) && !hasChanges}
+            icon={submission && !hasChanges ? <Check size={16} /> : undefined}
           >
-            {submitPlan.isPending ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Saving...
-              </>
-            ) : submission && !hasChanges ? (
-              <>
-                <Check size={18} />
-                Plan submitted
-              </>
-            ) : submission ? (
-              "Update my plan"
-            ) : (
-              "Submit my plan"
-            )}
-          </button>
+            {submission && !hasChanges ? "Submitted" : submission ? "Save changes" : "Submit my meals"}
+          </Button>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 
-function PlanStatus({
-  isPublished,
-  isOpen,
-  submittedAt,
-  updatedAt,
-}: {
-  isPublished: boolean;
-  isOpen: boolean;
-  submittedAt?: string;
-  updatedAt?: string;
-}) {
-  if (!isPublished) {
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-        The chef hasn't published next week's menu yet. It's usually
-        ready by Wednesday evening; check back then.
-      </div>
-    );
-  }
-
-  if (submittedAt) {
-    const edited =
-      updatedAt &&
-      new Date(updatedAt).getTime() -
-        new Date(submittedAt).getTime() >
-        60 * 1000;
-
-    return (
-      <div className="flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-5 text-sm text-green-800">
-        <CheckCircle2 size={20} className="mt-0.5 shrink-0" />
-
-        <div>
-          <p className="font-semibold">
-            Submitted {formatTimestamp(submittedAt)}
-            {edited && updatedAt
-              ? ` · last changed ${formatTimestamp(updatedAt)}`
-              : ""}
-          </p>
-
-          <p className="mt-1">
-            {isOpen
-              ? "You can still change your choices until the deadline."
-              : "Selection has closed. These are your meals for next week."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isOpen) {
-    return (
-      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
-        <Lock size={20} className="mt-0.5 shrink-0" />
-
-        <p>
-          Selection for next week has closed. You didn't submit a plan,
-          so no meals are booked for you next week.
-        </p>
-      </div>
-    );
-  }
-
-  return null;
-}
-
-function DayCard({
+function DayPicker({
   day,
   choice,
-  readOnly,
   onChoose,
 }: {
   day: PlanDay;
   choice?: string;
-  readOnly: boolean;
   onChoose: (value: string) => void;
 }) {
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-900">
-          {formatDay(day.date)}
-        </h2>
-
+    <Card>
+      <div className="flex items-center justify-between gap-3 border-b border-zinc-100 px-5 py-3.5">
+        <h2 className="font-semibold text-zinc-900">{formatDay(day.date)}</h2>
         {day.closed ? (
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-            Kitchen closed
-          </span>
+          <Badge>Kitchen closed</Badge>
         ) : choice ? (
-          <span className="flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
-            <Check size={14} />
-            Chosen
-          </span>
-        ) : null}
+          <Badge tone="success" icon={<Check size={12} />}>Chosen</Badge>
+        ) : (
+          <Badge tone="warning">To choose</Badge>
+        )}
       </div>
 
       {day.closed ? (
-        <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-6 text-sm text-gray-500">
-          <Store size={18} />
-          No meals are served on this day.
-        </div>
+        <p className="flex items-center gap-2 px-5 py-5 text-sm text-zinc-500">
+          <Store size={16} />
+          No meals are served this day.
+        </p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {day.options.map((food) => (
+        <div
+          role="radiogroup"
+          aria-label={formatDay(day.date)}
+          className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4"
+        >
+          {day.options.map((option) => (
             <ChoiceTile
-              key={food.id}
-              selected={choice === food.id}
-              disabled={readOnly}
-              onClick={() => onChoose(food.id)}
+              key={option.id}
+              selected={choice === option.id}
+              onSelect={() => onChoose(option.id)}
+              label={option.name}
             >
-              <div className="relative h-40 overflow-hidden">
-                <img
-                  src={food.image}
-                  alt={food.name}
-                  className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                />
-              </div>
-
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-900">
-                  {food.name}
-                </h3>
-              </div>
+              <DishImage src={option.image} alt="" className="aspect-[4/3] w-full" />
+              <p className="px-3 py-2.5 text-sm font-medium leading-snug text-zinc-900">
+                {option.name}
+              </p>
             </ChoiceTile>
           ))}
 
           <ChoiceTile
             selected={choice === NO_MEAL}
-            disabled={readOnly}
-            onClick={() => onChoose(NO_MEAL)}
+            onSelect={() => onChoose(NO_MEAL)}
+            label="No meal required"
           >
-            <div className="flex h-full min-h-[120px] flex-col items-center justify-center gap-2 p-4 text-center">
-              <Ban size={28} className="text-slate-400" />
-
-              <h3 className="font-semibold text-gray-900">
-                No meal required
-              </h3>
-
-              <p className="text-xs text-gray-500">
-                I won't be eating on this day
-              </p>
+            <div className="flex aspect-[4/3] w-full items-center justify-center bg-zinc-50 text-zinc-400">
+              <Ban size={26} strokeWidth={1.5} />
             </div>
+            <p className="px-3 py-2.5 text-sm font-medium leading-snug text-zinc-900">
+              No meal required
+            </p>
           </ChoiceTile>
         </div>
       )}
-    </section>
+    </Card>
   );
 }
 
 function ChoiceTile({
   selected,
-  disabled,
-  onClick,
+  onSelect,
+  label,
   children,
 }: {
   selected: boolean;
-  disabled: boolean;
-  onClick: () => void;
+  onSelect: () => void;
+  label: string;
   children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
-      disabled={disabled}
-      onClick={onClick}
-      aria-pressed={selected}
-      className={`group relative overflow-hidden rounded-xl border-2 text-left transition ${
+      role="radio"
+      aria-checked={selected}
+      aria-label={label}
+      onClick={onSelect}
+      className={cn(
+        "relative overflow-hidden rounded-xl border bg-white text-left transition",
         selected
-          ? "border-[#B10F16] bg-red-50"
-          : disabled
-            ? "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
-            : "border-gray-100 bg-white hover:border-gray-300"
-      }`}
+          ? "border-brand-600 ring-2 ring-brand-600/20"
+          : "border-zinc-200 hover:border-zinc-300 hover:shadow-card"
+      )}
     >
       {children}
-
       {selected && (
-        <div className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#B10F16] text-white shadow">
-          <Check size={18} />
-        </div>
+        <span className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white shadow">
+          <Check size={14} strokeWidth={3} />
+        </span>
       )}
     </button>
+  );
+}
+
+function DishImage({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed || !src) {
+    return (
+      <div className={cn("flex items-center justify-center bg-zinc-100 text-zinc-400", className)}>
+        <UtensilsCrossed size={18} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className={cn("bg-zinc-100 object-cover", className)}
+    />
   );
 }

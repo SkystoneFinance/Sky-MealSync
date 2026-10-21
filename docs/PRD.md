@@ -78,7 +78,7 @@ All times are **Africa/Lagos**. The schedule lives in `mealSync/src/modules/meal
 | ID | Requirement |
 |---|---|
 | PLAN-1 | The chef creates dishes per date (Food Management), can mark days **Kitchen closed**, then **publishes** the week. Publishing requires at least one active dish on every open day. Closed days can't change after publishing. |
-| PLAN-2 | Staff can only choose for **next week**. The current week is read-only; there are no late submissions. |
+| PLAN-2 | The chef can publish **next week and the week after** (up to 2 weeks ahead). Staff can choose for either once it is published, until that week's Thursday 19:00 close. The current and past weeks are **read-only** for everyone (staff see their own choices; chef/admin see the summary). No late submissions. |
 | PLAN-3 | For every open day, staff choose a dish **or "No meal required"**. A plan is submitted only when every open day has an answer. |
 | PLAN-4 | Staff can change their plan freely until the hard close. The original submission time is kept, and the last edit time is shown as "edited". |
 | PLAN-5 | Staff who don't submit get **no meals** that week and are listed as **"Did not submit"**, separately from "No meal required". |
@@ -131,6 +131,7 @@ Notifications are in-app only (no email). The office also announces the menu on 
 6. Should the admin screens show live updates when someone is served (the API already emits `attendance:new`)?
 
 ## 7. Change log for this document
+- 2026-10-21 — PLAN-2: two planning weeks; read-only view of current/past weeks.
 - 2026-10-21 — 4.4 rewritten: weekly meal planning (publish Wed 17:00, staff deadline Thu 17:00, hidden close Thu 19:00, "No meal required", chef summary). Replaces the day-by-day lock.
 - 2026-10-20 — AUTH-4/5: long-lived sliding sessions and logout.
 - 2026-09-30 — Initial version reverse-engineered from code.

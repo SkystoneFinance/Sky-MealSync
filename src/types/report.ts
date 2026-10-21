@@ -1,3 +1,12 @@
+export type ReportPeriod = "today" | "weekly" | "monthly";
+
+export type ExportPeriod =
+  | "today"
+  | "current-week"
+  | "previous-week"
+  | "current-month"
+  | "previous-month";
+
 export interface ReportSummary {
   totalStaff: number;
   served: number;

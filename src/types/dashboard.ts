@@ -3,6 +3,7 @@ export interface DashboardStats {
   activeStaff: number;
   inactiveStaff: number;
   mealsServedToday: number;
+  // Active staff not yet served today (activeStaff - mealsServedToday).
   remainingStaff: number;
 }
 

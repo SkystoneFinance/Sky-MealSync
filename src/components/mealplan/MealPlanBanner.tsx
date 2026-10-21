@@ -1,70 +1,47 @@
 import { Link } from "react-router-dom";
 
-import {
-  CheckCircle2,
-  ChevronRight,
-  UtensilsCrossed,
-} from "lucide-react";
+import { ArrowRight, UtensilsCrossed } from "lucide-react";
 
-import { useMyMealPlan } from "../../hooks/useMealPlan";
+import { useMyPlanStatus } from "../../hooks/useMealPlan";
 
 import {
-  formatDay,
   formatDeadline,
+  weekRangeLabel,
 } from "../../utils/mealPlanDates";
 
-// Top of the staff home page. Loud while next week's menu is
-// published and the staff member hasn't submitted; quiet once they have.
+// Top of the staff home page: loud while a published week is still
+// waiting for this person's choices. Nothing otherwise.
 export default function MealPlanBanner() {
-  const { data: plan } = useMyMealPlan();
+  const { data: weeks } = useMyPlanStatus();
 
-  if (!plan?.week.isOpen) {
+  const pending = weeks?.filter((w) => w.isOpen && !w.submittedAt) ?? [];
+
+  if (!pending.length) {
     return null;
   }
 
-  const weekOf = formatDay(plan.week.weekStart, {
-    day: "numeric",
-    month: "long",
-  });
-
-  if (plan.submission) {
-    return (
-      <div className="flex flex-col gap-3 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 sm:flex-row sm:items-center sm:justify-between">
-        <p className="flex items-center gap-2 font-medium">
-          <CheckCircle2 size={18} />
-          Your meals for the week of {weekOf} are submitted.
-        </p>
-
-        <Link
-          to="/meal-plan"
-          className="font-semibold underline-offset-2 hover:underline"
-        >
-          Review or change
-        </Link>
-      </div>
-    );
-  }
+  const first = pending[0];
 
   return (
     <div
       role="alert"
-      className="relative overflow-hidden rounded-3xl bg-linear-to-r from-[#760408] via-[#b50315] to-[#c70519] p-6 text-white shadow-lg sm:p-8"
+      className="overflow-hidden rounded-2xl bg-brand-600 text-white shadow-pop"
     >
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
         <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-            <UtensilsCrossed size={24} />
-          </div>
-
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+            <UtensilsCrossed size={22} />
+          </span>
           <div>
-            <h2 className="text-xl font-bold sm:text-2xl">
-              Next week's menu is ready
+            <h2 className="text-lg font-semibold sm:text-xl">
+              {pending.length > 1
+                ? "Two weeks of menus are ready"
+                : "The menu is ready"}
             </h2>
-
             <p className="mt-1 text-sm text-white/85 sm:text-base">
-              Choose your meals for the week of {weekOf} by{" "}
+              Choose your meals for {weekRangeLabel(first.weekStart)} by{" "}
               <span className="font-semibold text-white">
-                {formatDeadline(plan.week.deadline)}
+                {formatDeadline(first.deadline)}
               </span>
               .
             </p>
@@ -73,10 +50,10 @@ export default function MealPlanBanner() {
 
         <Link
           to="/meal-plan"
-          className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-[#B10F16] shadow transition hover:bg-red-50"
+          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-5 text-sm font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50"
         >
           Choose my meals
-          <ChevronRight size={18} />
+          <ArrowRight size={16} />
         </Link>
       </div>
     </div>

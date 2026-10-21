@@ -1,655 +1,265 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Html5Qrcode } from "html5-qrcode";
+import { Camera, CameraOff, Pause, RefreshCw } from "lucide-react";
 
-import {
-  Html5Qrcode,
-} from "html5-qrcode";
+import { Badge, Button, Card, CardHeader, Spinner, cn } from "../ui";
 
-import {
-  Camera,
-  CheckCircle2,
-  RefreshCw,
-  Utensils,
-  Loader2,
-} from "lucide-react";
+// The camera is driven imperatively by html5-qrcode, so it needs a real
+// element id. Only one scanner is ever mounted on the page.
+const READER_ID = "meal-qr-reader";
 
-import toast from "react-hot-toast";
-
-import { useScan } from "../../hooks/useScan";
-import { useServeMeal } from "../../hooks/useServedMeal";
-
+type CameraStatus = "starting" | "scanning" | "paused" | "error";
 
 // ==========================================
-// TYPES
+// CAMERA HOOK
 // ==========================================
+// Starts the rear camera while `active` is true and stops it otherwise.
+// Start/stop calls are queued so they never overlap (html5-qrcode throws if
+// you stop while it is still starting). After the first decode the camera
+// stops straight away so one QR code can never trigger two lookups.
 
-interface Staff {
-  id: string;
-  staffNumber: string;
-  firstName: string;
-  lastName: string;
-  department: string;
-  qrImage?: string;
-}
+function useQrCamera(active: boolean, onDecode: (text: string) => void) {
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const queueRef = useRef<Promise<void>>(Promise.resolve());
+  const decodedRef = useRef(false);
+  const onDecodeRef = useRef(onDecode);
 
-interface Meal {
-  id: string;
-  name: string;
-  image: string;
-}
+  const [status, setStatus] = useState<CameraStatus>("paused");
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
-interface Serving {
-  servedCount: number;
-  remainingServings: number;
-  maxDailyServings: number;
-}
-
-interface ScanResult {
-  staff: Staff;
-  meal: Meal;
-  serving: Serving;
-}
-
-
-// ==========================================
-// COMPONENT
-// ==========================================
-
-export default function ScannerCard() {
-  const scannerRef =
-    useRef<Html5Qrcode | null>(null);
-
-  const [isScanning, setIsScanning] =
-    useState(false);
-
-  const [scanResult, setScanResult] =
-    useState<ScanResult | null>(null);
-
-  const {
-    mutate: scan,
-    isPending: isScanningStaff,
-  } = useScan();
-
-  const {
-    mutate: serveMeal,
-    isPending: isServing,
-  } = useServeMeal();
-
-
-  // ==========================================
-  // START / STOP SCANNER
-  // ==========================================
+  // Always call the latest callback without restarting the camera.
+  useLayoutEffect(() => {
+    onDecodeRef.current = onDecode;
+  }, [onDecode]);
 
   useEffect(() => {
-    startScanner();
+    // Each effect run gets its own token; cleanup cancels it so queued work
+    // from a superseded run neither starts the camera nor sets state.
+    const run = { cancelled: false };
+
+    const enqueue = (task: () => Promise<void>) => {
+      queueRef.current = queueRef.current.then(task, task);
+    };
+
+    const stop = async () => {
+      const scanner = scannerRef.current;
+      if (!scanner) return;
+
+      scannerRef.current = null;
+
+      try {
+        if (scanner.isScanning) await scanner.stop();
+        scanner.clear();
+      } catch (stopError) {
+        console.error("Scanner stop error:", stopError);
+      }
+    };
+
+    if (!active) {
+      enqueue(async () => {
+        await stop();
+        if (!run.cancelled) setStatus("paused");
+      });
+      return () => {
+        run.cancelled = true;
+      };
+    }
+
+    enqueue(async () => {
+      // A newer effect run superseded this one before it got its turn.
+      if (run.cancelled) return;
+
+      await stop();
+
+      setStatus("starting");
+      setError(null);
+      decodedRef.current = false;
+
+      const scanner = new Html5Qrcode(READER_ID, { verbose: false });
+      scannerRef.current = scanner;
+
+      try {
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, aspectRatio: 1 },
+          (decodedText) => {
+            if (decodedRef.current) return;
+            decodedRef.current = true;
+
+            enqueue(stop);
+            onDecodeRef.current(decodedText);
+          },
+          () => {
+            // Frames without a QR code: ignore.
+          }
+        );
+
+        if (!run.cancelled) setStatus("scanning");
+      } catch (startError) {
+        console.error("QR scanner error:", startError);
+        scannerRef.current = null;
+
+        if (!run.cancelled) {
+          setStatus("error");
+          setError(cameraErrorMessage(startError));
+        }
+      }
+    });
 
     return () => {
-      stopScanner();
+      run.cancelled = true;
+      enqueue(stop);
     };
-  }, []);
+  }, [active, attempt]);
 
+  return {
+    status,
+    error,
+    retry: () => setAttempt((value) => value + 1),
+  };
+}
 
-  async function startScanner() {
-    if (scannerRef.current) {
-      return;
-    }
+function cameraErrorMessage(error: unknown) {
+  const text = String(
+    error instanceof Error ? `${error.name} ${error.message}` : error
+  );
 
-    const scanner =
-      new Html5Qrcode("reader");
-
-    scannerRef.current = scanner;
-
-    try {
-      await scanner.start(
-        {
-          facingMode: "environment",
-        },
-        {
-          fps: 10,
-
-          qrbox: {
-            width: 250,
-            height: 250,
-          },
-        },
-        onScanSuccess,
-        () => {},
-      );
-
-      setIsScanning(true);
-    } catch (error) {
-      console.error(
-        "QR scanner error:",
-        error,
-      );
-
-      scannerRef.current = null;
-
-      setIsScanning(false);
-
-      toast.error(
-        "Unable to access camera.",
-      );
-    }
+  if (/NotAllowed|Permission/i.test(text)) {
+    return "Camera access was blocked. Allow camera access for this site in your browser settings, then try again.";
   }
 
-
-  async function stopScanner() {
-    if (!scannerRef.current) {
-      return;
-    }
-
-    try {
-      if (
-        scannerRef.current.isScanning
-      ) {
-        await scannerRef.current.stop();
-      }
-
-      await scannerRef.current.clear();
-    } catch (error) {
-      console.error(
-        "Scanner stop error:",
-        error,
-      );
-    } finally {
-      scannerRef.current = null;
-
-      setIsScanning(false);
-    }
+  if (/NotFound|Requested device not found|no camera/i.test(text)) {
+    return "No camera was found on this device.";
   }
 
-
-  // ==========================================
-  // QR SCAN SUCCESS
-  // ==========================================
-
-  function onScanSuccess(
-    decodedText: string,
-  ) {
-    // Stop immediately so the same QR
-    // cannot trigger multiple requests.
-
-    stopScanner();
-
-    scan(
-      {
-        qrCodeId: decodedText,
-      },
-      {
-        onSuccess(response) {
-          setScanResult(
-            response.data,
-          );
-
-          toast.success(
-            "Staff identified successfully.",
-          );
-        },
-
-        onError(error: any) {
-          toast.error(
-            error.response?.data?.message ??
-              "Unable to identify staff.",
-          );
-
-          // Give the scanner a moment to
-          // fully stop before restarting.
-
-          setTimeout(() => {
-            startScanner();
-          }, 500);
-        },
-      },
-    );
+  if (/NotReadable|in use|Could not start video/i.test(text)) {
+    return "The camera is being used by another app. Close it and try again.";
   }
 
-
-  // ==========================================
-  // MARK AS EATEN
-  // ==========================================
-
-  function handleServeMeal() {
-    if (!scanResult) {
-      return;
-    }
-
-    const {
-      servedCount,
-      maxDailyServings,
-    } = scanResult.serving;
-
-    // ----------------------------------------
-    // FRONTEND SAFETY CHECK
-    // ----------------------------------------
-
-    if (
-      servedCount >= maxDailyServings
-    ) {
-      toast.error(
-        "Maximum daily servings reached.",
-      );
-
-      return;
-    }
-
-    serveMeal(
-      {
-        staffId:
-          scanResult.staff.id,
-      },
-      {
-        onSuccess(response) {
-          const result =
-            response.data;
-
-          // ----------------------------------
-          // UPDATE SERVING COUNT
-          // ----------------------------------
-
-          setScanResult(
-            (current) => {
-              if (!current) {
-                return current;
-              }
-
-              return {
-                ...current,
-
-                serving: {
-                  servedCount:
-                    result.attendance
-                      .servedCount,
-
-                  remainingServings:
-                    result.attendance
-                      .remainingServings,
-
-                  maxDailyServings:
-                    result.attendance
-                      .maxDailyServings,
-                },
-              };
-            },
-          );
-
-          toast.success(
-            `Meal served successfully. Serving ${result.attendance.servedCount} of ${result.attendance.maxDailyServings}.`,
-          );
-        },
-
-        onError(error: any) {
-          toast.error(
-            error.response?.data?.message ??
-              "Unable to record meal serving.",
-          );
-        },
-      },
-    );
+  if (/secure|https/i.test(text)) {
+    return "The camera only works on a secure (https) connection.";
   }
 
+  return "We couldn't start the camera. Check permissions and try again.";
+}
 
-  // ==========================================
-  // SCAN AGAIN
-  // ==========================================
+// ==========================================
+// CARD
+// ==========================================
 
-  async function scanAgain() {
-    if (isServing) {
-      return;
-    }
+const STATUS_COPY: Record<CameraStatus, string> = {
+  starting: "Starting camera…",
+  scanning: "Point the camera at a staff QR code",
+  paused: "Camera paused while you review this scan",
+  error: "Camera unavailable",
+};
 
-    setScanResult(null);
-
-    // Make sure the previous scanner is
-    // completely stopped before starting
-    // another one.
-
-    await stopScanner();
-
-    await startScanner();
-  }
-
-
-  // ==========================================
-  // RENDER
-  // ==========================================
+export default function ScannerCard({
+  active,
+  onDecode,
+}: {
+  active: boolean;
+  onDecode: (text: string) => void;
+}) {
+  const { status, error, retry } = useQrCamera(active, onDecode);
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-
-      {scanResult ? (
-        <div className="flex flex-col items-center">
-
-          {/* ==================================
-              SUCCESS ICON
-          ================================== */}
-
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
-            <CheckCircle2
-              size={38}
-              className="text-green-600"
-            />
-          </div>
-
-
-          {/* ==================================
-              TITLE
-          ================================== */}
-
-          <h2 className="mt-4 text-2xl font-bold text-slate-900">
-            Staff Identified
-          </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Review the selected meal before serving.
-          </p>
-
-
-          {/* ==================================
-              STAFF INFORMATION
-          ================================== */}
-
-          <div className="mt-6 w-full max-w-md rounded-2xl border border-slate-200 bg-slate-50 p-5">
-
-            <div className="flex items-center gap-4">
-
-              {scanResult.staff.qrImage ? (
-                <img
-                  src={
-                    scanResult.staff.qrImage
-                  }
-                  alt={`${scanResult.staff.firstName} ${scanResult.staff.lastName}`}
-                  className="h-16 w-16 rounded-xl border border-slate-200 bg-white object-cover"
-                />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-white text-slate-400">
-                  <Camera size={24} />
-                </div>
-              )}
-
-              <div className="min-w-0">
-
-                <h3 className="truncate text-lg font-bold text-slate-900">
-                  {scanResult.staff.firstName}{" "}
-                  {scanResult.staff.lastName}
-                </h3>
-
-                <p className="text-sm text-slate-500">
-                  {scanResult.staff.staffNumber}
-                </p>
-
-                <p className="text-sm text-slate-500">
-                  {scanResult.staff.department}
-                </p>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* ==================================
-              SELECTED MEAL
-          ================================== */}
-
-          <div className="mt-5 w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white">
-
-            {scanResult.meal.image ? (
-              <img
-                src={
-                  scanResult.meal.image
-                }
-                alt={
-                  scanResult.meal.name
-                }
-                className="h-48 w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-48 items-center justify-center bg-slate-100 text-slate-400">
-                <Utensils size={40} />
-              </div>
-            )}
-
-            <div className="p-5">
-
-              <div className="flex items-center gap-2">
-
-                <Utensils
-                  size={18}
-                  className="text-[#B10F16]"
-                />
-
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Selected Meal
-                </p>
-
-              </div>
-
-              <h3 className="mt-2 text-xl font-bold text-slate-900">
-                {scanResult.meal.name}
-              </h3>
-
-
-              {/* ==================================
-                  SERVING INFORMATION
-              ================================== */}
-
-              <div className="mt-5 grid grid-cols-2 gap-3">
-
-                <div className="rounded-xl bg-slate-50 p-4">
-
-                  <p className="text-xs font-medium text-slate-500">
-                    Served Today
-                  </p>
-
-                  <p className="mt-1 text-2xl font-bold text-slate-900">
-                    {
-                      scanResult.serving
-                        .servedCount
-                    }
-
-                    <span className="text-sm font-medium text-slate-400">
-                      /
-                      {
-                        scanResult.serving
-                          .maxDailyServings
-                      }
-                    </span>
-                  </p>
-
-                </div>
-
-
-                <div className="rounded-xl bg-red-50 p-4">
-
-                  <p className="text-xs font-medium text-slate-500">
-                    Remaining
-                  </p>
-
-                  <p className="mt-1 text-2xl font-bold text-[#B10F16]">
-                    {
-                      scanResult.serving
-                        .remainingServings
-                    }
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* ==================================
-              SERVE BUTTON
-          ================================== */}
-
-          {scanResult.serving.remainingServings > 0 ? (
-
-            <button
-              type="button"
-              onClick={
-                handleServeMeal
+    <Card>
+      <CardHeader
+        title="Camera"
+        description="Uses the rear camera on phones and tablets."
+        actions={
+          status === "scanning" ? (
+            <Badge
+              tone="success"
+              icon={
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
               }
-              disabled={isServing}
-              className="mt-6 inline-flex w-full max-w-md items-center justify-center gap-2 rounded-xl bg-[#B10F16] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#920C12] disabled:cursor-not-allowed disabled:opacity-60"
             >
-
-              {isServing ? (
-                <>
-                  <Loader2
-                    size={18}
-                    className="animate-spin"
-                  />
-
-                  Recording serving...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2
-                    size={18}
-                  />
-
-                  Mark as Eaten
-                </>
-              )}
-
-            </button>
-
+              Live
+            </Badge>
+          ) : status === "error" ? (
+            <Badge tone="danger">Off</Badge>
           ) : (
+            <Badge>{status === "starting" ? "Starting" : "Paused"}</Badge>
+          )
+        }
+      />
 
-            <div className="mt-6 w-full max-w-md rounded-xl bg-red-50 p-4 text-center">
-
-              <p className="text-sm font-semibold text-[#B10F16]">
-                Maximum daily servings reached.
-              </p>
-
-              <p className="mt-1 text-xs text-slate-500">
-                This staff member cannot be served again today.
-              </p>
-
-            </div>
-
-          )}
-
-
-          {/* ==================================
-              SCAN AGAIN
-          ================================== */}
-
-          <button
-            type="button"
-            onClick={
-              scanAgain
-            }
-            disabled={isServing}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-
-            <RefreshCw
-              size={17}
-            />
-
-            Scan Again
-
-          </button>
-
-        </div>
-
-      ) : (
-
-        <>
-          {/* ==================================
-              SCANNER HEADER
-          ================================== */}
-
-          <div className="mb-6 flex items-center gap-3">
-
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDEBEC]">
-
-              <Camera
-                size={20}
-                className="text-[#B10F16]"
-              />
-
-            </div>
-
-            <div>
-
-              <h2 className="text-xl font-bold text-slate-900">
-                QR Scanner
-              </h2>
-
-              <p className="text-sm text-slate-500">
-                Scan a staff QR code to identify their meal.
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* ==================================
-              QR READER
-          ================================== */}
-
+      <div className="p-4 sm:p-5">
+        <div className="relative mx-auto aspect-square w-full max-w-md overflow-hidden rounded-2xl bg-zinc-900">
+          {/* html5-qrcode injects its <video> in here. */}
           <div
-            id="reader"
-            className="overflow-hidden rounded-2xl border border-slate-200"
+            id={READER_ID}
+            className={cn(
+              "absolute inset-0 [&_video]:h-full! [&_video]:w-full! [&_video]:object-cover",
+              status !== "scanning" && "opacity-0"
+            )}
           />
 
+          {status === "scanning" && <ViewfinderFrame />}
 
-          {/* ==================================
-              IDENTIFYING STAFF
-          ================================== */}
-
-          {isScanningStaff && (
-            <div className="mt-5 flex items-center justify-center gap-2 text-sm font-medium text-slate-600">
-
-              <Loader2
-                size={17}
-                className="animate-spin text-[#B10F16]"
-              />
-
-              Identifying staff...
-
+          {status === "starting" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm text-zinc-300">
+              <Spinner className="text-zinc-400" />
+              Starting camera…
             </div>
           )}
 
+          {status === "paused" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-sm text-zinc-300">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-200">
+                <Pause size={20} aria-hidden="true" />
+              </span>
+              Scanning paused
+            </div>
+          )}
 
-          {/* ==================================
-              START CAMERA
-          ================================== */}
-
-          {!isScanning &&
-            !isScanningStaff && (
-              <button
-                type="button"
-                onClick={
-                  startScanner
-                }
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#B10F16] py-3 font-semibold text-white transition hover:bg-[#900d12]"
+          {status === "error" && (
+            <div
+              role="alert"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-50 px-6 text-center"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <CameraOff size={20} aria-hidden="true" />
+              </span>
+              <p className="font-medium text-zinc-900">Camera unavailable</p>
+              <p className="max-w-xs text-sm text-zinc-500">{error}</p>
+              <Button
+                variant="secondary"
+                onClick={retry}
+                icon={<RefreshCw size={16} />}
+                className="mt-1"
               >
+                Try again
+              </Button>
+            </div>
+          )}
+        </div>
 
-                <Camera
-                  size={18}
-                />
+        <p
+          aria-live="polite"
+          className="mt-4 flex items-center justify-center gap-2 text-center text-sm text-zinc-500"
+        >
+          <Camera size={16} aria-hidden="true" className="shrink-0" />
+          {STATUS_COPY[status]}
+        </p>
+      </div>
+    </Card>
+  );
+}
 
-                Start Camera
+// Corner brackets that frame the scan area.
+function ViewfinderFrame() {
+  const corner = "absolute h-10 w-10 border-white/90";
 
-              </button>
-            )}
-
-        </>
-
-      )}
-
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-[14%]">
+      <span className={cn(corner, "top-0 left-0 rounded-tl-xl border-t-4 border-l-4")} />
+      <span className={cn(corner, "top-0 right-0 rounded-tr-xl border-t-4 border-r-4")} />
+      <span className={cn(corner, "bottom-0 left-0 rounded-bl-xl border-b-4 border-l-4")} />
+      <span className={cn(corner, "right-0 bottom-0 rounded-br-xl border-r-4 border-b-4")} />
     </div>
   );
 }

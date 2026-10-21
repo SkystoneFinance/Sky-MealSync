@@ -1,208 +1,106 @@
-import { useState } from "react";
-import { X, UserPlus } from "lucide-react";
+import { useState, type FormEvent } from "react";
 import toast from "react-hot-toast";
 
+import { Button, Modal } from "../ui";
 import { useCreateStaff } from "../../hooks/useStaff";
+import { apiErrorMessage } from "../../utils/mealPlanDates";
+
+import StaffFormFields from "./StaffFormFields";
+import {
+  EMPTY_STAFF_FORM,
+  trimStaffForm,
+  validateStaffForm,
+  type StaffFormErrors,
+} from "./staffForm";
 
 interface Props {
   open: boolean;
   close: () => void;
+  departments?: string[];
 }
 
-export default function AddStaffModal({
-  open,
-  close,
-}: Props) {
+const FORM_ID = "add-staff-form";
+
+export default function AddStaffModal({ open, close, departments = [] }: Props) {
   const { mutate, isPending } = useCreateStaff();
 
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    staffNumber: "",
-    department: "",
-  });
+  const [form, setForm] = useState(EMPTY_STAFF_FORM);
+  const [errors, setErrors] = useState<StaffFormErrors>({});
+  const [submitted, setSubmitted] = useState(false);
 
-  if (!open) return null;
+  function reset() {
+    setForm(EMPTY_STAFF_FORM);
+    setErrors({});
+    setSubmitted(false);
+  }
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
+  function handleClose() {
+    if (isPending) return;
+    reset();
+    close();
+  }
 
-    mutate(form, {
+  function handleChange(next: typeof form) {
+    setForm(next);
+    if (submitted) setErrors(validateStaffForm(next));
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    setSubmitted(true);
+
+    const nextErrors = validateStaffForm(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    const payload = trimStaffForm(form);
+
+    mutate(payload, {
       onSuccess() {
-        toast.success("Staff created successfully!");
-
-        setForm({
-          firstName: "",
-          lastName: "",
-          staffNumber: "",
-          department: "",
-        });
-
+        toast.success(`${payload.firstName} ${payload.lastName} added.`);
+        reset();
         close();
       },
-
-      onError(error: any) {
-        console.error(error);
-
-        toast.error(
-          error?.response?.data?.message ??
-            "Unable to create staff."
-        );
+      onError(error) {
+        const status = (error as { response?: { status?: number } })?.response
+          ?.status;
+        if (status === 409) {
+          setErrors((prev) => ({
+            ...prev,
+            staffNumber: "This staff number is already in use.",
+          }));
+        }
+        toast.error(apiErrorMessage(error, "Couldn't add this staff member."));
       },
     });
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-
-      <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
-
-        {/* Header */}
-
-        <div className="flex items-center justify-between border-b px-6 py-5">
-
-          <div className="flex items-center gap-3">
-
-            <div className="rounded-2xl bg-red-800/10 p-3">
-
-              <UserPlus className="text-red-800" />
-
-            </div>
-
-            <div>
-
-              <h2 className="text-2xl font-bold">
-
-                Add New Staff
-
-              </h2>
-
-              <p className="text-sm text-gray-500">
-
-                Register a new staff member.
-
-              </p>
-
-            </div>
-
-          </div>
-
-          <button
-            onClick={close}
-            className="rounded-xl p-2 transition hover:bg-gray-100"
-          >
-            <X />
-          </button>
-
-        </div>
-
-        {/* Form */}
-
-        <form
-          onSubmit={submit}
-          className="space-y-5 p-6"
-        >
-
-          <div>
-
-            <label className="mb-2 block text-sm font-medium">
-
-              First Name
-
-            </label>
-
-            <input
-              value={form.firstName}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  firstName: e.target.value,
-                })
-              }
-              placeholder="John"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-red-800 focus:ring-2 focus:ring-red-800/20"
-            />
-
-          </div>
-
-          <div>
-
-            <label className="mb-2 block text-sm font-medium">
-
-              Last Name
-
-            </label>
-
-            <input
-              value={form.lastName}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  lastName: e.target.value,
-                })
-              }
-              placeholder="Doe"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/20"
-            />
-
-          </div>
-
-          <div>
-
-            <label className="mb-2 block text-sm font-medium">
-
-              Staff Number
-
-            </label>
-
-            <input
-              value={form.staffNumber}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  staffNumber: e.target.value,
-                })
-              }
-              placeholder="MS001"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/20"
-            />
-
-          </div>
-
-          <div>
-
-            <label className="mb-2 block text-sm font-medium">
-
-              Department
-
-            </label>
-
-            <input
-              value={form.department}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  department: e.target.value,
-                })
-              }
-              placeholder="Kitchen"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-[#B10F16] focus:ring-2 focus:ring-[#B10F16]/20"
-            />
-
-          </div>
-
-          <button
-            type="submit"
-            disabled={isPending}
-            className="mt-2 w-full active:scale-95 bg-red-800  rounded-xl py-3 text-lg font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-          >
-            {isPending ? "Creating Staff..." : "Create Staff"}
-          </button>
-
-        </form>
-
-      </div>
-
-    </div>
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="Add staff"
+      description="They'll get a QR code automatically and can activate their account with their staff number."
+      footer={
+        <>
+          <Button variant="secondary" onClick={handleClose} disabled={isPending}>
+            Cancel
+          </Button>
+          <Button type="submit" form={FORM_ID} loading={isPending}>
+            Add staff
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={submit} noValidate>
+        <StaffFormFields
+          values={form}
+          errors={errors}
+          onChange={handleChange}
+          departments={departments}
+          autoFocus
+        />
+      </form>
+    </Modal>
   );
 }

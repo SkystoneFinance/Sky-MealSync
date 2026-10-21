@@ -1,136 +1,68 @@
-/* ===========================
-   Tailwind CSS v4
-=========================== */
+/* Jost is an open-source Futura revival, used where Futura isn't installed
+   (Apple devices ship Futura and will use it). Must come before tailwindcss. */
+@import url("https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap");
 
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap");
 
 /* ===========================
-   Theme Variables
-=========================== */
+   Design tokens
+   =========================== */
 
-/* ===========================
-   Global Reset
-=========================== */
+@theme {
+  --font-sans: "Futura PT", "Futura", "Jost", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", sans-serif;
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+  /* Skystone red, built around #B10F16 */
+  --color-brand-50: #fdf3f3;
+  --color-brand-100: #fbe4e5;
+  --color-brand-200: #f6c7c9;
+  --color-brand-300: #ee9a9e;
+  --color-brand-400: #e15b62;
+  --color-brand-500: #cc2830;
+  --color-brand-600: #b10f16;
+  --color-brand-700: #920c12;
+  --color-brand-800: #760a0f;
+  --color-brand-900: #5c090d;
+
+  --shadow-card: 0 1px 2px rgb(24 24 27 / 0.04), 0 1px 3px rgb(24 24 27 / 0.06);
+  --shadow-pop: 0 10px 30px -10px rgb(24 24 27 / 0.25);
 }
 
-html,
-body,
-#root {
-  width: 100%;
-  min-height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-/* ===========================
-   Body
-=========================== */
-
-body {
-  font-family: var(--font-sans);
-  background: var(--background);
-  color: var(--foreground);
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  overflow-x: hidden;
-}
-
-/* ===========================
-   Typography
-=========================== */
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  margin: 0;
-  color: #111827;
-  font-family: var(--font-heading);
-  font-weight: 600;
-}
-
-p {
-  margin: 0;
-}
-
-/* ===========================
-   Form Elements
-=========================== */
-
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-  border: none;
-  outline: none;
-}
-.button:active {
-  transform: scale(0.95);
-}
-
-input,
-textarea,
-select {
-  outline: none;
-}
-
-/* ===========================
-   Images
-=========================== */
-
-img {
-  display: block;
-  max-width: 100%;
-}
-
-/* ===========================
-   Links
-=========================== */
-
-/* In the base layer so Tailwind text-* classes on links still apply */
 @layer base {
-  a {
-    text-decoration: none;
-    color: inherit;
+  html {
+    -webkit-text-size-adjust: 100%;
   }
-}
 
-.sidebar-scroll {
-  overflow-y: auto;
-  overflow-x: hidden;
+  body {
+    @apply bg-zinc-50 font-sans text-zinc-900 antialiased;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
 
-  /* Firefox */
-  scrollbar-width: none;
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-  /* Older browsers */
-  -ms-overflow-style: none;
-}
+  button {
+    cursor: pointer;
+  }
 
-/* Chrome, Edge and Safari */
-.sidebar-scroll::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
+  button:disabled {
+    cursor: not-allowed;
+  }
 
-button::active {
-  transform: scale(0.95);
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+
+  /* Tabular figures for numbers in stats and tables */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
 }

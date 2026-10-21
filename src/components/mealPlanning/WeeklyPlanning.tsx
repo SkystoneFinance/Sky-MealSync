@@ -5,14 +5,14 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCopy,
+  CircleCheck,
+  CircleDashed,
+  Copy,
   Download,
-  Loader2,
   Send,
+  Store,
+  TriangleAlert,
+  UsersRound,
 } from "lucide-react";
 
 import { useAuth } from "../../hooks/useAuth";
@@ -37,73 +37,60 @@ import {
   formatDay,
   formatDeadline,
   formatTimestamp,
+  relativeWeekLabel,
+  shiftWeek,
+  weekRangeLabel,
+  weeksBetween,
 } from "../../utils/mealPlanDates";
 
-function shiftWeek(weekStart: string, weeks: number) {
-  const date = new Date(`${weekStart}T00:00:00.000Z`);
-  date.setUTCDate(date.getUTCDate() + weeks * 7);
-  return date.toISOString().slice(0, 10);
-}
+import {
+  Avatar,
+  Badge,
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  EmptyState,
+  PageHeader,
+  PageLoader,
+  StatCard,
+  WeekSwitcher,
+  buttonStyles,
+  cn,
+} from "../ui";
+
+const HISTORY_WEEKS = 26;
 
 export default function WeeklyPlanning() {
   const { data: status, isLoading } = useChefPlanStatus();
-  const [offset, setOffset] = useState(0);
+  const [week, setWeek] = useState<string>();
 
   if (isLoading || !status) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="animate-spin" size={30} />
-      </div>
-    );
+    return <PageLoader />;
   }
 
-  const weekStart = shiftWeek(status.weekStart, offset);
+  const nextWeek = status.weekStart;
+  const selected = week ?? nextWeek;
+  const offset = weeksBetween(nextWeek, selected);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">
-            Weekly Planning
-            {offset === 0 && " · next week"}
-          </p>
+    <div>
+      <PageHeader
+        title="Weekly planning"
+        description="Publish the menu up to two weeks ahead and see what to cook."
+        actions={
+          <WeekSwitcher
+            label={weekRangeLabel(selected)}
+            sublabel={relativeWeekLabel(selected, nextWeek)}
+            onPrevious={() => setWeek(shiftWeek(selected, -1))}
+            onNext={() => setWeek(shiftWeek(selected, 1))}
+            canPrevious={offset > -HISTORY_WEEKS}
+            canNext={offset < 1}
+          />
+        }
+      />
 
-          <h1 className="mt-1 text-2xl font-bold text-gray-900">
-            Week of {formatDay(weekStart, { day: "numeric", month: "long", year: "numeric" })}
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Previous week"
-            onClick={() => setOffset((v) => v - 1)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          <button
-            type="button"
-            disabled={offset === 0}
-            onClick={() => setOffset(0)}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
-          >
-            Next week
-          </button>
-
-          <button
-            type="button"
-            aria-label="Following week"
-            onClick={() => setOffset((v) => v + 1)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      </div>
-
-      <WeekPanel key={weekStart} weekStart={weekStart} />
+      <WeekPanel key={selected} weekStart={selected} />
     </div>
   );
 }
@@ -111,32 +98,23 @@ export default function WeeklyPlanning() {
 function WeekPanel({ weekStart }: { weekStart: string }) {
   const { data: week, isLoading, isError } = useMenuWeek(weekStart);
 
-  if (isLoading) {
-    return (
-      <div className="flex h-40 items-center justify-center">
-        <Loader2 className="animate-spin text-gray-400" size={24} />
-      </div>
-    );
-  }
+  if (isLoading) return <PageLoader />;
 
   if (isError || !week) {
     return (
-      <div className="rounded-2xl bg-red-50 p-6 text-sm text-red-600">
-        Unable to load this week.
-      </div>
+      <Callout tone="danger" title="We couldn't load this week">
+        Check your connection and try again.
+      </Callout>
     );
   }
 
-  return (
-    <>
-      <StatusCard week={week} />
+  const isDraft = !week.isPublished && week.isPlanningWeek && !week.isClosed;
 
-      {week.isPublished ? (
-        <SummarySection week={week} />
-      ) : (
-        <DraftSection week={week} />
-      )}
-    </>
+  return (
+    <div className="space-y-6">
+      <StatusStrip week={week} />
+      {isDraft ? <DraftWeek week={week} /> : <SummaryWeek week={week} />}
+    </div>
   );
 }
 
@@ -144,53 +122,49 @@ function WeekPanel({ weekStart }: { weekStart: string }) {
 // STATUS
 // ==========================================
 
-function StatusCard({ week }: { week: MenuWeek }) {
+function StatusStrip({ week }: { week: MenuWeek }) {
   const stage = week.isPublished
     ? week.isClosed
-      ? { label: "Confirmed", tone: "bg-green-100 text-green-800" }
-      : { label: "Open for selection", tone: "bg-blue-100 text-blue-800" }
-    : week.isClosed
-      ? { label: "Never published", tone: "bg-slate-200 text-slate-700" }
-      : { label: "Draft", tone: "bg-amber-100 text-amber-800" };
+      ? <Badge tone="success" icon={<CircleCheck size={12} />}>Confirmed</Badge>
+      : <Badge tone="info" icon={<CircleDashed size={12} />}>Open for choices</Badge>
+    : week.isPlanningWeek && !week.isClosed
+      ? <Badge tone="warning">Draft</Badge>
+      : <Badge>Before weekly planning</Badge>;
+
+  const items = week.isPublished || week.isPlanningWeek
+    ? [
+        { label: "Publish by", value: formatDeadline(week.publishDueAt) },
+        {
+          label: "Published",
+          value: week.publishedAt ? formatTimestamp(week.publishedAt) : "Not yet",
+          flag: week.publishedLate ? "Late" : undefined,
+        },
+        { label: "Staff deadline", value: formatDeadline(week.deadline) },
+      ]
+    : [];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${stage.tone}`}>
-          {stage.label}
-        </span>
-
-        {week.publishedLate && (
-          <span className="flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
-            <AlertTriangle size={13} />
-            Published late
-          </span>
+    <Card className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-center gap-3">
+        {stage}
+        {!items.length && (
+          <p className="text-sm text-zinc-500">Staff chose these meals day by day.</p>
         )}
       </div>
-
-      <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
-        <div>
-          <dt className="text-slate-500">Publish by</dt>
-          <dd className="font-semibold text-slate-900">
-            {formatDeadline(week.publishDueAt)}
-          </dd>
-        </div>
-
-        <div>
-          <dt className="text-slate-500">Published</dt>
-          <dd className="font-semibold text-slate-900">
-            {week.publishedAt ? formatTimestamp(week.publishedAt) : "Not yet"}
-          </dd>
-        </div>
-
-        <div>
-          <dt className="text-slate-500">Staff deadline</dt>
-          <dd className="font-semibold text-slate-900">
-            {formatDeadline(week.deadline)}
-          </dd>
-        </div>
-      </dl>
-    </div>
+      {items.length > 0 && (
+        <dl className="grid gap-4 text-sm sm:grid-cols-3 lg:gap-8">
+          {items.map((item) => (
+            <div key={item.label}>
+              <dt className="text-zinc-500">{item.label}</dt>
+              <dd className="mt-0.5 flex items-center gap-2 font-medium text-zinc-900">
+                {item.value}
+                {item.flag && <Badge tone="danger">{item.flag}</Badge>}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </Card>
   );
 }
 
@@ -198,12 +172,15 @@ function StatusCard({ week }: { week: MenuWeek }) {
 // DRAFT: CLOSED DAYS + PUBLISH
 // ==========================================
 
-function DraftSection({ week }: { week: MenuWeek }) {
+function DraftWeek({ week }: { week: MenuWeek }) {
   const { user } = useAuth();
   const setClosedDays = useSetClosedDays(week.weekStart);
   const publish = usePublishWeek(week.weekStart);
 
   const closed = week.days.filter((d) => d.closed).map((d) => d.date);
+  const missing = week.days.filter(
+    (d) => !d.closed && !d.options.some((o) => o.isActive !== false)
+  );
 
   const toggleClosed = (date: string) => {
     const next = closed.includes(date)
@@ -230,108 +207,102 @@ function DraftSection({ week }: { week: MenuWeek }) {
     });
   };
 
-  if (week.isClosed) {
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
-        This week was never published, so no meals were planned.
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-bold text-slate-900">Menu for the week</h2>
-
-          {user?.role === "ADMIN" && (
-            <Link
-              to="/food-management"
-              className="text-sm font-semibold text-[#B10F16] hover:underline"
-            >
-              Add or edit dishes in Food Management →
+    <Card>
+      <CardHeader
+        title="Menu"
+        description="Check each day, mark any day the kitchen is closed, then publish."
+        actions={
+          user?.role === "ADMIN" && (
+            <Link to="/food-management" className={buttonStyles("secondary", "sm")}>
+              Edit dishes
             </Link>
-          )}
-        </div>
+          )
+        }
+      />
 
-        <ul className="mt-4 divide-y divide-slate-100">
-          {week.days.map((day) => {
-            const active = day.options.filter((o) => o.isActive !== false);
+      <ul className="divide-y divide-zinc-100">
+        {week.days.map((day) => {
+          const active = day.options.filter((o) => o.isActive !== false);
 
-            return (
-              <li
-                key={day.date}
-                className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="font-semibold text-slate-900">
-                    {formatDay(day.date)}
-                  </p>
+          return (
+            <li key={day.date} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="font-medium text-zinc-900">{formatDay(day.date)}</p>
+                <p className={cn("mt-0.5 text-sm", !day.closed && !active.length ? "text-amber-700" : "text-zinc-500")}>
+                  {day.closed
+                    ? "Kitchen closed"
+                    : active.length
+                      ? active.map((o) => o.name).join(" · ")
+                      : "No dishes yet"}
+                </p>
+              </div>
 
-                  <p className="text-sm text-slate-500">
-                    {day.closed
-                      ? "Kitchen closed"
-                      : active.length
-                        ? active.map((o) => o.name).join(" · ")
-                        : "⚠ No dishes yet"}
-                  </p>
-                </div>
+              <label className="flex shrink-0 cursor-pointer items-center gap-2.5 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={day.closed}
+                  disabled={setClosedDays.isPending}
+                  onChange={() => toggleClosed(day.date)}
+                  className="h-4 w-4 rounded border-zinc-300 accent-brand-600"
+                />
+                Kitchen closed
+              </label>
+            </li>
+          );
+        })}
+      </ul>
 
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={day.closed}
-                    disabled={setClosedDays.isPending}
-                    onChange={() => toggleClosed(day.date)}
-                    className="h-4 w-4 accent-[#B10F16]"
-                  />
-                  Kitchen closed
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          type="button"
+      <div className="flex flex-col gap-3 border-t border-zinc-100 bg-zinc-50/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-zinc-500">
+          {missing.length
+            ? `Add dishes for ${missing.map((d) => formatDay(d.date, { weekday: "long" })).join(", ")} or mark ${missing.length > 1 ? "them" : "it"} closed.`
+            : `Due ${formatDeadline(week.publishDueAt)}. Staff then have until ${formatDeadline(week.deadline)}.`}
+        </p>
+        <Button
+          icon={<Send size={16} />}
           onClick={handlePublish}
-          disabled={publish.isPending}
-          className="flex items-center gap-2 rounded-xl bg-[#B10F16] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#920c12] disabled:opacity-50"
+          loading={publish.isPending}
+          disabled={missing.length > 0}
         >
-          {publish.isPending ? (
-            <Loader2 size={18} className="animate-spin" />
-          ) : (
-            <Send size={18} />
-          )}
-          Publish menu to staff
-        </button>
+          Publish menu
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
 // ==========================================
-// PUBLISHED: ANNOUNCEMENT + SUMMARY
+// SUMMARY
 // ==========================================
 
-function SummarySection({ week }: { week: MenuWeek }) {
+function SummaryWeek({ week }: { week: MenuWeek }) {
   const { data: summary, isLoading } = useMealPrepSummary(week.weekStart);
   const [downloading, setDownloading] = useState(false);
+
+  if (isLoading || !summary) return <PageLoader />;
+
+  if (!summary.isPublished && !summary.isLegacy) {
+    return (
+      <Card>
+        <EmptyState
+          icon={<Store size={20} />}
+          title="No meals were planned this week"
+          description="The menu wasn't published, so nobody chose meals."
+        />
+      </Card>
+    );
+  }
 
   const handleExport = async () => {
     try {
       setDownloading(true);
-
       const blob = await mealPlanService.exportSummary(week.weekStart);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-
       link.href = url;
       link.download = `MealSync-Meal-Prep-${week.weekStart}.xlsx`;
       link.click();
-
       window.URL.revokeObjectURL(url);
     } catch (error) {
       toast.error(apiErrorMessage(error, "Export failed."));
@@ -340,146 +311,113 @@ function SummarySection({ week }: { week: MenuWeek }) {
     }
   };
 
-  if (isLoading || !summary) {
-    return (
-      <div className="flex h-40 items-center justify-center">
-        <Loader2 className="animate-spin text-gray-400" size={24} />
-      </div>
-    );
-  }
+  const status = summary.isLegacy
+    ? { value: "Final", hint: "Chosen day by day" }
+    : summary.isConfirmed
+      ? { value: "Confirmed", hint: "Selection has closed" }
+      : { value: "Provisional", hint: `Final at ${formatDeadline(summary.hardClose)}` };
 
   return (
     <div className="space-y-6">
-      {!week.isClosed && <Announcement week={week} />}
-
-      {/* HEADLINE NUMBERS */}
+      {week.isPublished && !week.isClosed && <Announcement week={week} />}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Submitted" value={`${summary.totals.submitted} / ${summary.totals.activeStaff}`} />
-        <Stat label="Did not submit" value={summary.totals.notSubmitted} />
-        <Stat
-          label="Status"
-          value={summary.isConfirmed ? "Confirmed" : "Provisional"}
-          hint={summary.isConfirmed ? undefined : "Numbers can change until selection closes"}
+        <StatCard
+          label={summary.isLegacy ? "Chose meals" : "Submitted"}
+          value={`${summary.totals.submitted} / ${summary.totals.activeStaff}`}
+          hint={`${Math.round((summary.totals.submitted / Math.max(summary.totals.activeStaff, 1)) * 100)}% of active staff`}
+          icon={<UsersRound size={16} />}
         />
+        <StatCard
+          label={summary.isLegacy ? "Didn't choose" : "Did not submit"}
+          value={summary.totals.notSubmitted}
+          icon={<TriangleAlert size={16} />}
+        />
+        <StatCard label="Status" value={status.value} hint={status.hint} />
       </div>
 
-      {/* PER DAY */}
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-bold text-slate-900">Meal Preparation Summary</h2>
-
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={downloading}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          >
-            {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            Excel
-          </button>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <Card>
+        <CardHeader
+          title="Meal preparation"
+          description="What to cook each day."
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Download size={15} />}
+              loading={downloading}
+              onClick={handleExport}
+            >
+              Excel
+            </Button>
+          }
+        />
+        <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {summary.days.map((day) => (
-            <DaySummary key={day.date} day={day} />
+            <DayColumn
+              key={day.date}
+              day={day}
+              legacy={summary.isLegacy}
+              activeStaff={summary.totals.activeStaff}
+            />
           ))}
         </div>
-      </div>
+      </Card>
 
       <StaffLists summary={summary} />
     </div>
   );
 }
 
-function Announcement({ week }: { week: MenuWeek }) {
-  const text =
-    `🍽️ Next week's menu (week of ${formatDay(week.weekStart, { day: "numeric", month: "long" })}) is now on MealSync.\n` +
-    `Please choose your meals, or "No meal required", by ${formatDeadline(week.deadline)}.\n` +
-    `If you don't submit, no meals will be booked for you next week.`;
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success("Announcement copied. Paste it into WhatsApp.");
-    } catch {
-      toast.error("Couldn't copy. Select the text and copy it manually.");
-    }
-  };
-
-  return (
-    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="font-bold text-blue-900">Let staff know</h2>
-          <p className="mt-2 whitespace-pre-line text-sm text-blue-900/80">{text}</p>
-        </div>
-
-        <button
-          type="button"
-          onClick={copy}
-          className="flex shrink-0 items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-        >
-          <ClipboardCopy size={16} />
-          Copy message
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  hint,
+function DayColumn({
+  day,
+  legacy,
+  activeStaff,
 }: {
-  label: string;
-  value: string | number;
-  hint?: string;
+  day: MealPrepSummary["days"][number];
+  legacy: boolean;
+  activeStaff: number;
 }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-slate-900">{value}</p>
-      {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
-    </div>
-  );
-}
+  // Older weeks were chosen day by day, so "didn't choose" is per day
+  const didNotChoose = legacy
+    ? Math.max(0, activeStaff - day.mealsRequired - day.noMeal)
+    : day.notSubmitted;
 
-function DaySummary({ day }: { day: MealPrepSummary["days"][number] }) {
   return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-      <p className="font-semibold text-slate-900">{formatDay(day.date)}</p>
+    <div className="rounded-lg border border-zinc-200 p-4">
+      <p className="text-sm font-semibold text-zinc-900">{formatDay(day.date, { weekday: "long" })}</p>
+      <p className="text-xs text-zinc-500">{formatDay(day.date, { day: "numeric", month: "short" })}</p>
 
       {day.closed ? (
-        <p className="mt-2 text-sm text-slate-500">Kitchen closed</p>
+        <p className="mt-4 text-sm text-zinc-500">Kitchen closed</p>
       ) : (
         <>
-          <ul className="mt-3 space-y-1 text-sm">
+          <p className="tabular mt-4 text-3xl font-semibold tracking-tight text-zinc-900">
+            {day.mealsRequired}
+          </p>
+          <p className="text-xs font-medium text-zinc-500">meals</p>
+
+          <ul className="mt-4 space-y-2 text-sm">
             {day.options.map((o) => (
-              <li key={o.id} className="flex justify-between gap-2">
-                <span className="text-slate-700">
+              <li key={o.id} className="flex items-start justify-between gap-3">
+                <span className={cn("leading-snug", o.isActive ? "text-zinc-700" : "text-zinc-400")}>
                   {o.name}
-                  {!o.isActive && <span className="text-xs text-slate-400"> (disabled)</span>}
                 </span>
-                <span className="font-semibold text-slate-900">{o.count}</span>
+                <span className="tabular font-semibold text-zinc-900">{o.count}</span>
               </li>
             ))}
           </ul>
 
-          <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-sm">
-            <p className="flex justify-between font-bold text-[#B10F16]">
-              <span>Meals required</span>
-              <span>{day.mealsRequired}</span>
-            </p>
-            <p className="flex justify-between text-slate-600">
-              <span>No meal required</span>
-              <span>{day.noMeal}</span>
-            </p>
-            <p className="flex justify-between text-slate-600">
-              <span>Did not submit</span>
-              <span>{day.notSubmitted}</span>
+          <div className="mt-4 space-y-1 border-t border-zinc-100 pt-3 text-xs text-zinc-500">
+            {!legacy && (
+              <p className="flex justify-between">
+                <span>No meal required</span>
+                <span className="tabular">{day.noMeal}</span>
+              </p>
+            )}
+            <p className="flex justify-between">
+              <span>{legacy ? "Didn't choose" : "Didn't submit"}</span>
+              <span className="tabular">{didNotChoose}</span>
             </p>
           </div>
         </>
@@ -488,70 +426,95 @@ function DaySummary({ day }: { day: MealPrepSummary["days"][number] }) {
   );
 }
 
+function Announcement({ week }: { week: MenuWeek }) {
+  const text =
+    `🍽️ The MealSync menu for ${weekRangeLabel(week.weekStart)} is ready.\n` +
+    `Please choose your meals, or "No meal required", by ${formatDeadline(week.deadline)}.\n` +
+    `If you don't submit, no meals will be booked for you that week.`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied. Paste it into WhatsApp.");
+    } catch {
+      toast.error("Couldn't copy. Select the text and copy it manually.");
+    }
+  };
+
+  return (
+    <Callout
+      tone="info"
+      title="Let staff know"
+      action={
+        <Button variant="secondary" size="sm" icon={<Copy size={15} />} onClick={copy}>
+          Copy message
+        </Button>
+      }
+    >
+      <p className="mt-1 whitespace-pre-line">{text}</p>
+    </Callout>
+  );
+}
+
 function StaffLists({ summary }: { summary: MealPrepSummary }) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="flex items-center gap-2 font-bold text-slate-900">
-          <CheckCircle2 size={18} className="text-green-600" />
-          Submitted ({summary.submitted.length})
-        </h2>
+      <Card>
+        <CardHeader
+          title={`${summary.isLegacy ? "Chose meals" : "Submitted"} (${summary.submitted.length})`}
+          description={summary.isLegacy ? "Time of their first choice" : "In order of submission"}
+        />
+        {summary.submitted.length ? (
+          <ul className="max-h-[28rem] divide-y divide-zinc-100 overflow-y-auto">
+            {summary.submitted.map((s) => (
+              <li key={s.id} className="flex items-center gap-3 px-5 py-3">
+                <Avatar name={`${s.firstName} ${s.lastName}`} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-zinc-900">
+                    {s.firstName} {s.lastName}
+                  </p>
+                  <p className="truncate text-xs text-zinc-500">
+                    {s.staffNumber} · {s.department}
+                  </p>
+                </div>
+                <div className="text-right text-xs">
+                  <p className="font-medium text-zinc-700">{formatTimestamp(s.submittedAt)}</p>
+                  {s.edited && <p className="text-zinc-400">edited {formatTimestamp(s.updatedAt)}</p>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState title="No submissions yet" />
+        )}
+      </Card>
 
-        <div className="mt-3 max-h-96 overflow-y-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase text-slate-400">
-              <tr>
-                <th className="py-2">Name</th>
-                <th className="py-2">Submitted</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {summary.submitted.map((s) => (
-                <tr key={s.id}>
-                  <td className="py-2">
-                    <p className="font-medium text-slate-900">{s.firstName} {s.lastName}</p>
-                    <p className="text-xs text-slate-500">{s.staffNumber} · {s.department}</p>
-                  </td>
-                  <td className="py-2 text-slate-700">
-                    {formatTimestamp(s.submittedAt)}
-                    {s.edited && (
-                      <p className="text-xs text-slate-400">edited {formatTimestamp(s.updatedAt)}</p>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {!summary.submitted.length && (
-            <p className="py-4 text-sm text-slate-500">No submissions yet.</p>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="flex items-center gap-2 font-bold text-slate-900">
-          <AlertTriangle size={18} className="text-amber-500" />
-          Did not submit ({summary.notSubmitted.length})
-        </h2>
-
-        <ul className="mt-3 max-h-96 divide-y divide-slate-100 overflow-y-auto text-sm">
-          {summary.notSubmitted.map((s) => (
-            <li key={s.id} className="flex items-center justify-between gap-2 py-2">
-              <div>
-                <p className="font-medium text-slate-900">{s.firstName} {s.lastName}</p>
-                <p className="text-xs text-slate-500">{s.staffNumber} · {s.department}</p>
-              </div>
-
-              {!s.hasActivatedAccount && (
-                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-                  Never activated
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
+      <Card>
+        <CardHeader
+          title={`${summary.isLegacy ? "Didn't choose" : "Didn't submit"} (${summary.notSubmitted.length})`}
+          description="Active staff with no meals booked"
+        />
+        {summary.notSubmitted.length ? (
+          <ul className="max-h-[28rem] divide-y divide-zinc-100 overflow-y-auto">
+            {summary.notSubmitted.map((s) => (
+              <li key={s.id} className="flex items-center gap-3 px-5 py-3">
+                <Avatar name={`${s.firstName} ${s.lastName}`} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-zinc-900">
+                    {s.firstName} {s.lastName}
+                  </p>
+                  <p className="truncate text-xs text-zinc-500">
+                    {s.staffNumber} · {s.department}
+                  </p>
+                </div>
+                {!s.hasActivatedAccount && <Badge>Never signed in</Badge>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState title="Everyone has submitted" />
+        )}
+      </Card>
     </div>
   );
 }

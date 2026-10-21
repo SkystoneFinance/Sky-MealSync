@@ -1,319 +1,161 @@
-import { Download, ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { reportService } from "../../services/report.service";
+import { ChevronDown, Download, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 
-interface Props {
-  period: string;
+import { Button, PageHeader, cn } from "../ui";
+import { reportService } from "../../services/report.service";
+import type { ExportPeriod } from "../../types/report";
+import { apiErrorMessage } from "../../utils/mealPlanDates";
+
+const EXPORT_OPTIONS: {
+  value: ExportPeriod;
+  label: string;
+  filename: string;
+}[] = [
+  { value: "today", label: "Today", filename: "MealSync-Today.xlsx" },
+  {
+    value: "current-week",
+    label: "This week",
+    filename: "MealSync-This-Week.xlsx",
+  },
+  {
+    value: "previous-week",
+    label: "Last week",
+    filename: "MealSync-Last-Week.xlsx",
+  },
+  {
+    value: "current-month",
+    label: "This month",
+    filename: "MealSync-This-Month.xlsx",
+  },
+  {
+    value: "previous-month",
+    label: "Last month",
+    filename: "MealSync-Last-Month.xlsx",
+  },
+];
+
+// Blob errors come back as a Blob too, so read the JSON message out of it.
+async function exportErrorMessage(error: unknown) {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+
+  if (data instanceof Blob) {
+    try {
+      const parsed = JSON.parse(await data.text()) as { message?: string };
+      if (parsed.message) return parsed.message;
+    } catch {
+      // not JSON; fall through
+    }
+  }
+
+  return apiErrorMessage(error, "Unable to export the report. Please try again.");
 }
 
-type ExportPeriod =
-  | "today"
-  | "current-week"
-  | "previous-week"
-  | "current-month"
-  | "previous-month";
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
-export default function HistoryHeader({
-  period,
-}: Props) {
+function ExportMenu() {
   const [open, setOpen] = useState(false);
-
-  const [downloading, setDownloading] =
-    useState<ExportPeriod | null>(null);
-
-  const dropdownRef =
-    useRef<HTMLDivElement>(null);
-
-  // ========================================
-  // CLOSE DROPDOWN WHEN CLICKING OUTSIDE
-  // ========================================
+  const [downloading, setDownloading] = useState<ExportPeriod | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(
-      event: MouseEvent
-    ) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(
-          event.target as Node
-        )
-      ) {
+    if (!open) return;
+
+    const onPointer = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
-    }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
 
-    document.addEventListener(
-      "mousedown",
-      handleClickOutside
-    );
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
 
     return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [open]);
 
-  // ========================================
-  // EXPORT OPTIONS
-  // ========================================
+  async function download(option: (typeof EXPORT_OPTIONS)[number]) {
+    setDownloading(option.value);
 
-  const getExportOptions = (): {
-    label: string;
-    value: ExportPeriod;
-  }[] => {
-    switch (period) {
-      case "weekly":
-        return [
-          {
-            label: "Present Week",
-            value: "current-week",
-          },
-          {
-            label: "Previous Week",
-            value: "previous-week",
-          },
-        ];
-
-      case "monthly":
-        return [
-          {
-            label: "Present Month",
-            value: "current-month",
-          },
-          {
-            label: "Previous Month",
-            value: "previous-month",
-          },
-        ];
-
-      case "today":
-      default:
-        return [
-          {
-            label: "Today",
-            value: "today",
-          },
-        ];
-    }
-  };
-
-  // ========================================
-  // DOWNLOAD
-  // ========================================
-
-  async function download(
-    exportPeriod: ExportPeriod
-  ) {
     try {
-      setDownloading(exportPeriod);
-
-      const blob =
-        await reportService.downloadReport(
-          exportPeriod
-        );
-
-      const url =
-        window.URL.createObjectURL(blob);
-
-      const link =
-        document.createElement("a");
-
-      link.href = url;
-
-      const filenames: Record<
-        ExportPeriod,
-        string
-      > = {
-        today:
-          "MealSync-Today.xlsx",
-
-        "current-week":
-          "MealSync-Present-Week.xlsx",
-
-        "previous-week":
-          "MealSync-Previous-Week.xlsx",
-
-        "current-month":
-          "MealSync-Present-Month.xlsx",
-
-        "previous-month":
-          "MealSync-Previous-Month.xlsx",
-      };
-
-      link.download =
-        filenames[exportPeriod];
-
-      document.body.appendChild(link);
-
-      link.click();
-
-      link.remove();
-
-      window.URL.revokeObjectURL(url);
-
+      const blob = await reportService.downloadReport(option.value);
+      saveBlob(blob, option.filename);
       setOpen(false);
     } catch (error) {
-      console.error(
-        "Failed to download report:",
-        error
-      );
-
-      alert(
-        "Unable to export the report. Please try again."
-      );
+      toast.error(await exportErrorMessage(error));
     } finally {
       setDownloading(null);
     }
   }
 
-  const options =
-    getExportOptions();
-
   return (
-    <div className="flex items-center justify-between">
-      {/* ======================================
-          HEADER
-      ====================================== */}
-
-      <div>
-        <h1 className="text-2xl md:text-4xl font-bold">
-          Attendance History
-        </h1>
-
-        <p className="mt-2 text-xs md:text-lg text-gray-500">
-          View and download historical attendance data
-        </p>
-      </div>
-
-      {/* ======================================
-          EXPORT DROPDOWN
-      ====================================== */}
-
-      <div
-        ref={dropdownRef}
-        className="relative"
+    <div ref={containerRef} className="relative">
+      <Button
+        variant="secondary"
+        icon={<Download size={16} />}
+        loading={downloading !== null}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
       >
-        <button
-          type="button"
-          onClick={() =>
-            setOpen((previous) => !previous)
-          }
-          className="
-            flex
-            items-center
-            gap-2
-            rounded-xl
-            bg-[#B10F16]
-            px-5
-            py-4
-            text-sm
-            font-medium
-            text-white
-            transition
-            hover:bg-[#8D0B11]
-          "
+        Export
+        <ChevronDown
+          size={16}
+          className={cn("text-zinc-400 transition-transform", open && "rotate-180")}
+        />
+      </Button>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label="Export period"
+          className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-pop"
         >
-          <Download size={18} />
-
-          <span>
-            Export Excel
-          </span>
-
-          <ChevronDown
-            size={18}
-            className={`
-              transition-transform
-              duration-200
-              ${open ? "rotate-180" : ""}
-            `}
-          />
-        </button>
-
-        {/* ====================================
-            DROPDOWN MENU
-        ==================================== */}
-
-        {open && (
-          <div
-            className="
-              absolute
-              right-0
-              z-50
-              mt-2
-              w-56
-              overflow-hidden
-              rounded-2xl
-              border
-              border-gray-200
-              bg-white
-              shadow-xl
-            "
-          >
-            <div className="p-2">
-              {options.map(
-                (option) => {
-                  const isDownloading =
-                    downloading ===
-                    option.value;
-
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      disabled={
-                        downloading !== null
-                      }
-                      onClick={() =>
-                        download(
-                          option.value
-                        )
-                      }
-                      className="
-                        flex
-                        w-full
-                        items-center
-                        justify-between
-                        rounded-xl
-                        px-4
-                        py-3
-                        text-left
-                        text-sm
-                        font-medium
-                        text-gray-700
-                        transition
-                        hover:bg-gray-100
-                        disabled:cursor-not-allowed
-                        disabled:opacity-50
-                      "
-                    >
-                      <span>
-                        {option.label}
-                      </span>
-
-                      {isDownloading && (
-                        <span
-                          className="
-                            h-4
-                            w-4
-                            animate-spin
-                            rounded-full
-                            border-2
-                            border-gray-300
-                            border-t-[#B10F16]
-                          "
-                        />
-                      )}
-                    </button>
-                  );
-                }
+          <p className="px-3 pt-2 pb-1 text-xs font-medium text-zinc-500">
+            Download as Excel
+          </p>
+          {EXPORT_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="menuitem"
+              disabled={downloading !== null}
+              onClick={() => download(option)}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-zinc-900 disabled:cursor-not-allowed disabled:text-zinc-400"
+            >
+              {option.label}
+              {downloading === option.value && (
+                <Loader2 size={14} className="animate-spin text-zinc-400" />
               )}
-            </div>
-          </div>
-        )}
-      </div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function HistoryHeader() {
+  return (
+    <PageHeader
+      title="Reports"
+      description="Meals served and attendance across your staff."
+      actions={<ExportMenu />}
+    />
   );
 }
