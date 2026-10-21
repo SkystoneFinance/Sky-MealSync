@@ -75,6 +75,25 @@ export const authService = {
 
 
   // ==========================================
+  // REFRESH SESSION (ADMIN OR STAFF)
+  // Swaps the current token for a fresh one.
+  // ==========================================
+
+  async refresh() {
+
+    const res =
+      await api.post<{
+        success: boolean;
+        token: string;
+      }>(
+        "/auth/refresh"
+      );
+
+    return res.data.token;
+  },
+
+
+  // ==========================================
   // ADMIN CURRENT USER
   // ==========================================
 

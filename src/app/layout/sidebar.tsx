@@ -11,6 +11,7 @@ import {
 } from "framer-motion";
 
 import {
+  LogOut,
   Menu,
   X,
 } from "lucide-react";
@@ -31,7 +32,7 @@ import {
 
 export default function Sidebar() {
 
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const menuItems = useMemo(() => {
 
@@ -58,6 +59,19 @@ export default function Sidebar() {
 
   const closeSidebar = () => {
     setIsOpen(false);
+  };
+
+
+  // Sessions are long-lived, so confirm before ending one
+  const handleLogout = () => {
+
+    if (
+      window.confirm("Log out of MealSync?")
+    ) {
+      closeSidebar();
+      logout();
+    }
+
   };
 
 
@@ -337,8 +351,21 @@ export default function Sidebar() {
 
           {/* Footer */}
 
-          <div className="shrink-0 border-t border-white/40 pt-5 text-sm text-slate-500">
-            MealSync v1.0
+          <div className="shrink-0 border-t border-white/40 pt-5">
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mb-4 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white/50 hover:text-[#B10F16]"
+            >
+              <LogOut size={18} />
+              Log out
+            </button>
+
+            <p className="text-sm text-slate-500">
+              MealSync v1.0
+            </p>
+
           </div>
 
         </motion.div>

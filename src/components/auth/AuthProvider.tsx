@@ -1,10 +1,24 @@
 import {
   createContext,
+  useCallback,
   useEffect,
   useState,
 } from "react";
 
+import { isAxiosError } from "axios";
+
 import { authService } from "../../services/auth.service";
+
+import { queryClient } from "../../lib/queryClient";
+
+import {
+  SESSION_EXPIRED_EVENT,
+  TOKEN_KEY,
+  USER_KEY,
+  clearSession,
+  isRefreshDue,
+  saveToken,
+} from "../../lib/session";
 
 import type {
   LoginPayload,
@@ -54,6 +68,58 @@ export default function AuthProvider({
 
 
   // ===================================
+  // LOGOUT
+  // ===================================
+
+  const logout = useCallback(() => {
+
+    clearSession();
+
+    // Don't leave the previous user's data in the cache
+    queryClient.clear();
+
+    setUser(null);
+
+  }, []);
+
+
+  // ===================================
+  // SLIDING EXPIRY: SWAP TOKEN FOR A
+  // FRESH ONE AT MOST ONCE A DAY
+  // ===================================
+
+  const refreshSession = useCallback(async () => {
+
+    if (
+      !localStorage.getItem(TOKEN_KEY) ||
+      !isRefreshDue()
+    ) {
+      return;
+    }
+
+
+    try {
+
+      const token =
+        await authService.refresh();
+
+      saveToken(token);
+
+    } catch (error) {
+
+      // A 401 is handled by the axios interceptor (logs out).
+      // Anything else (offline, server down): try again later.
+      console.error(
+        "Session refresh failed:",
+        error
+      );
+
+    }
+
+  }, []);
+
+
+  // ===================================
   // RESTORE AUTH
   // ===================================
 
@@ -62,10 +128,10 @@ export default function AuthProvider({
     async function restoreAuth() {
 
       const token =
-        localStorage.getItem("token");
+        localStorage.getItem(TOKEN_KEY);
 
       const savedUser =
-        localStorage.getItem("user");
+        localStorage.getItem(USER_KEY);
 
 
       if (!token) {
@@ -97,7 +163,7 @@ export default function AuthProvider({
         } catch {
 
           localStorage.removeItem(
-            "user"
+            USER_KEY
           );
 
         }
@@ -121,7 +187,7 @@ export default function AuthProvider({
           setUser(staff);
 
           localStorage.setItem(
-            "user",
+            USER_KEY,
             JSON.stringify(staff)
           );
 
@@ -139,11 +205,13 @@ export default function AuthProvider({
           setUser(currentUser);
 
           localStorage.setItem(
-            "user",
+            USER_KEY,
             JSON.stringify(currentUser)
           );
 
         }
+
+        void refreshSession();
 
       } catch (error) {
 
@@ -153,15 +221,25 @@ export default function AuthProvider({
         );
 
 
-        localStorage.removeItem(
-          "token"
-        );
+        // Only end the session if the server rejected it.
+        // Network errors / server downtime keep the stored user
+        // so long-lived sessions survive a bad connection.
+        const status =
+          isAxiosError(error)
+            ? error.response?.status
+            : undefined;
 
-        localStorage.removeItem(
-          "user"
-        );
+        if (
+          status === 401 ||
+          status === 403 ||
+          status === 404
+        ) {
 
-        setUser(null);
+          clearSession();
+
+          setUser(null);
+
+        }
 
       } finally {
 
@@ -174,7 +252,81 @@ export default function AuthProvider({
 
     restoreAuth();
 
-  }, []);
+  }, [refreshSession]);
+
+
+  // ===================================
+  // KEEP SESSION FRESH WHILE APP IS OPEN
+  // (e.g. the kitchen scanner that is never reloaded)
+  // ===================================
+
+  useEffect(() => {
+
+    if (!user) {
+      return;
+    }
+
+
+    const interval =
+      window.setInterval(
+        () => void refreshSession(),
+        1000 * 60 * 60
+      );
+
+
+    const handleVisibility = () => {
+
+      if (
+        document.visibilityState === "visible"
+      ) {
+        void refreshSession();
+      }
+
+    };
+
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
+    );
+
+
+    return () => {
+
+      window.clearInterval(interval);
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
+
+    };
+
+  }, [user, refreshSession]);
+
+
+  // ===================================
+  // API REJECTED OUR TOKEN → LOG OUT
+  // ===================================
+
+  useEffect(() => {
+
+    window.addEventListener(
+      SESSION_EXPIRED_EVENT,
+      logout
+    );
+
+
+    return () => {
+
+      window.removeEventListener(
+        SESSION_EXPIRED_EVENT,
+        logout
+      );
+
+    };
+
+  }, [logout]);
 
 
   // ===================================
@@ -189,14 +341,11 @@ export default function AuthProvider({
       await authService.login(data);
 
 
-    localStorage.setItem(
-      "token",
-      result.token
-    );
+    saveToken(result.token);
 
 
     localStorage.setItem(
-      "user",
+      USER_KEY,
       JSON.stringify(result.user)
     );
 
@@ -215,14 +364,11 @@ export default function AuthProvider({
     token: string
   ) {
 
-    localStorage.setItem(
-      "token",
-      token
-    );
+    saveToken(token);
 
 
     localStorage.setItem(
-      "user",
+      USER_KEY,
       JSON.stringify(staffUser)
     );
 
@@ -232,23 +378,6 @@ export default function AuthProvider({
   }
 
 
-  // ===================================
-  // LOGOUT
-  // ===================================
-
-  function logout() {
-
-    localStorage.removeItem(
-      "token"
-    );
-
-    localStorage.removeItem(
-      "user"
-    );
-
-    setUser(null);
-
-  }
 
 
   return (
