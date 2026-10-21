@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
 
-import { ArrowRight, Clock3 } from "lucide-react";
+import { ArrowRight, Clock3, UtensilsCrossed } from "lucide-react";
 
 import { Avatar, Card, CardHeader, EmptyState, Spinner } from "../ui";
 import type { RecentAttendance as Attendance } from "../../types/dashboard";
-import { formatTimestamp } from "../../utils/mealPlanDates";
+import { dishImageUrl, formatTimestamp } from "../../utils/mealPlanDates";
 
 // "Just now", "12 min ago", "3 h ago" for today's servings, otherwise "22 Oct, 14:05".
 function formatServedAt(iso: string, now: number) {
@@ -22,6 +22,26 @@ interface Props {
   error: boolean;
   data: Attendance[];
   now: number;
+}
+
+function Dish({ meal }: { meal: Attendance["meal"] }) {
+  return (
+    <div className="hidden min-w-0 flex-1 items-center gap-2.5 sm:flex">
+      {meal?.image ? (
+        <img
+          src={dishImageUrl(meal.image)}
+          alt=""
+          loading="lazy"
+          className="h-8 w-8 shrink-0 rounded-md bg-zinc-100 object-cover"
+        />
+      ) : (
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-400">
+          <UtensilsCrossed size={14} />
+        </span>
+      )}
+      <p className="truncate text-sm text-zinc-700">{meal?.name ?? "—"}</p>
+    </div>
+  );
 }
 
 export default function RecentAttendance({ loading, error, data, now }: Props) {
@@ -58,14 +78,19 @@ export default function RecentAttendance({ loading, error, data, now }: Props) {
           return (
             <li key={attendance.id} className="flex items-center gap-3 px-5 py-3">
               <Avatar name={name} size="sm" />
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 sm:flex-none sm:basis-56">
                 <p className="truncate text-sm font-medium text-zinc-900">
                   {name}
                 </p>
                 <p className="truncate text-xs text-zinc-500">
                   {attendance.staff.department}
+                  {/* On phones the dish goes under the name */}
+                  {attendance.meal && (
+                    <span className="sm:hidden"> · {attendance.meal.name}</span>
+                  )}
                 </p>
               </div>
+              <Dish meal={attendance.meal} />
               <time
                 dateTime={attendance.scannedAt}
                 title={formatTimestamp(attendance.scannedAt)}
@@ -84,7 +109,7 @@ export default function RecentAttendance({ loading, error, data, now }: Props) {
     <Card>
       <CardHeader
         title="Recent servings"
-        description="Latest meals checked in"
+        description="Latest meals served today"
         actions={
           <Link
             to="/check-meal"
