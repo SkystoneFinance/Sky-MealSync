@@ -37,6 +37,7 @@ export default function AttendanceTable({ rows }: { rows: ServedRow[] }) {
               <Th>Staff</Th>
               <Th>Staff number</Th>
               <Th>Department</Th>
+              <Th>Dish</Th>
               <Th className="text-right">Time served</Th>
             </tr>
           </thead>
@@ -56,6 +57,7 @@ export default function AttendanceTable({ rows }: { rows: ServedRow[] }) {
                   </Td>
                   <Td className="tabular text-zinc-600">{attendance.staff.staffNumber}</Td>
                   <Td className="text-zinc-600">{attendance.staff.department || "—"}</Td>
+                  <Td className="text-zinc-900">{attendance.meal?.name ?? "—"}</Td>
                   <Td className="tabular text-right text-zinc-600">
                     <time dateTime={attendance.scannedAt}>
                       {formatServedTime(attendance.scannedAt)}
@@ -86,6 +88,9 @@ export default function AttendanceTable({ rows }: { rows: ServedRow[] }) {
                   {attendance.staff.staffNumber}
                   {attendance.staff.department && ` · ${attendance.staff.department}`}
                 </p>
+                {attendance.meal && (
+                  <p className="truncate text-sm text-zinc-800">{attendance.meal.name}</p>
+                )}
               </div>
               <time
                 dateTime={attendance.scannedAt}

@@ -20,6 +20,9 @@ export interface Attendance {
   scannedAt: string;
 
   staff: AttendanceStaff;
+
+  // The dish they chose for the day (today's list only)
+  meal?: { id: string; name: string; image: string } | null;
 }
 
 // =========================================

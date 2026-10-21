@@ -19,6 +19,7 @@ Sections: **Added** · **Changed** · **Fixed** · **Removed** · **Security**
 - **Week arrows** on My meals and Weekly planning: view this week and past weeks read-only (including weeks chosen day by day before weekly planning), and plan up to two weeks ahead.
 - Staff home shows today's meal and the status of the next two weeks.
 - Staff can be edited and activated or deactivated from the Staff page.
+- Served today shows the dish each person chose, and search matches dish names.
 
 ### Removed
 - framer-motion animations, react-icons, the old Navbar/Sidebar and unused files (`App.tsx`, `pages/DashboardEntry.tsx`, `utils/download.ts`, unused history/report components and hooks, OTP types, `tailwind.config.ts`).

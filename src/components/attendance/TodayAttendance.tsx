@@ -99,7 +99,8 @@ export default function TodayAttendance() {
       const matchesSearch =
         !query ||
         `${firstName} ${lastName}`.toLowerCase().includes(query) ||
-        staffNumber.toLowerCase().includes(query);
+        staffNumber.toLowerCase().includes(query) ||
+        Boolean(attendance.meal?.name.toLowerCase().includes(query));
 
       const matchesDepartment =
         department === ALL_DEPARTMENTS ||
@@ -184,7 +185,7 @@ export default function TodayAttendance() {
                 <Input
                   id="served-search"
                   type="search"
-                  placeholder="Search name or staff number"
+                  placeholder="Search name, staff number or dish"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   leading={<Search size={16} />}

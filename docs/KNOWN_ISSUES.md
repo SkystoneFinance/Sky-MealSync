@@ -23,7 +23,7 @@ Severity: 🔴 fix soon · 🟠 important · 🟡 minor / cleanup
 | F4 | 🟠 | FE `weeklyplan.tsx` | `submitted` never resets when changing week, so the button stays disabled. The spinner ignores the update mutation. |
 | F5 | 🟠 | FE `stafff/staffTable.tsx:77` | Staff **Edit button does nothing**. There's no UI to activate or deactivate staff, though the API supports it. |
 | F6 | 🟠 | BE socket plugin + CORS | Socket.IO CORS only allows `localhost:5173`. The frontend doesn't listen to `attendance:new` anyway. |
-| F7 | 🟠 | BE dates | "Today" uses the server's time zone (`startOfDay(new Date())`). If the host runs UTC, day boundaries and locks shift. |
+| F7 | 🟡 | BE reports | Scanning, serving and the dashboard now use the Lagos day (`businessToday()`). The reports module still uses `startOfDay()` in the server's time zone; correct while Render runs in UTC, but should be moved to `businessToday()` too. |
 | F8 | 🟡 | FE `login.tsx:77, 218` | Navigates to `/dashboard` and `/staff/dashboard`, which don't exist. It only works through the `*` redirect. |
 | F9 | 🟡 | FE `AppRoutes.tsx:49-50` | `/check-meal` and `/history` have no role guard, so staff can open them by URL. |
 | F10 | 🟡 | FE routes/sidebar | SUPER_ADMIN can't open Food Management, and ADMIN has no History link. Confirm this is intended. |
