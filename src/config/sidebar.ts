@@ -30,6 +30,7 @@ export const navByRole: Record<Role, NavItem[]> = {
   SUPER_ADMIN: [
     { title: "Overview", path: "/", icon: House },
     { title: "Weekly planning", path: "/weekly-planning", icon: CalendarRange },
+    { title: "Menu", path: "/food-management", icon: ChefHat },
     { title: "Served today", path: "/check-meal", icon: ClipboardCheck },
     { title: "Reports", path: "/history", icon: ChartColumn },
     { title: "Scan", path: "/scan", icon: ScanLine },

@@ -9,6 +9,15 @@ Sections: **Added** · **Changed** · **Fixed** · **Removed** · **Security**
 
 ## [Unreleased]
 
+### Added
+- **Forgot your PIN?** on the staff sign-in: sends a reset request to administrators (shown on their Overview and at the top of Staff). Administrators can **Reset PIN** from a request or any staff row; the person then sets a new one with "Activate your account".
+- **Reopen** (administrators, Weekly planning → Didn't submit): after the deadline, let one person choose for 24 hours. Their submission is marked **Late**, and a note tells the kitchen the numbers changed. The staff member sees "Reopened for you until …".
+- Administrators can now edit the **Menu** (previously kitchen only).
+
+### Changed
+- My meals: submitting with blank days outlines each blank day in red ("Required") with an explanation, scrolls to the first, and says how many are blank.
+
+
 ### Changed
 - Overview: removed "Staff by department"; "Recent servings" now shows the dish each person was served, full width.
 

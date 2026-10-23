@@ -28,6 +28,8 @@ export interface StaffMealPlan {
     deadline: string;
     isPublished: boolean;
     isOpen: boolean;
+    // Set when an administrator reopened selection for this person
+    reopenedUntil: string | null;
     // Not published through weekly planning (older weeks)
     isLegacy: boolean;
     // Next week or the week after
@@ -47,6 +49,7 @@ export interface StaffMealPlan {
 export interface StaffWeekStatus {
   weekStart: string;
   deadline: string;
+  reopenedUntil: string | null;
   isPublished: boolean;
   isOpen: boolean;
   submittedAt: string | null;
@@ -118,8 +121,11 @@ export interface MealPrepSummary {
     submittedAt: string;
     updatedAt: string;
     edited: boolean;
+    // Submitted/changed after selection closed (reopened by an admin)
+    late: boolean;
   })[];
   notSubmitted: (SummaryStaff & {
     hasActivatedAccount: boolean;
+    reopenedUntil: string | null;
   })[];
 }

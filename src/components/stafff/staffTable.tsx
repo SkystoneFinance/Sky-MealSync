@@ -7,6 +7,7 @@ import type { Staff } from "../../types/staff";
 import { apiErrorMessage } from "../../utils/mealPlanDates";
 
 import { downloadStaffQr, staffFullName } from "./staffForm";
+import ResetPinButton from "./ResetPinButton";
 
 interface Props {
   staff: Staff[];
@@ -53,6 +54,12 @@ function RowActions({
         onClick={() => downloadStaffQr(person)}
         icon={<QrCode size={16} />}
       />
+      {/* Keep icons aligned when there's no PIN to reset */}
+      {person.hasPin ? (
+        <ResetPinButton staff={person} compact />
+      ) : (
+        <span className="h-9 w-9" aria-hidden="true" />
+      )}
       <Button
         variant="ghost"
         size="icon"

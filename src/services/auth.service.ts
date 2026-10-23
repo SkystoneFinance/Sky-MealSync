@@ -49,6 +49,25 @@ export const authService = {
 
 
   // ==========================================
+  // FORGOT PIN: ask an administrator to reset it
+  // ==========================================
+
+  async requestPinReset(staffNumber: string) {
+
+    const res =
+      await api.post<{
+        success: boolean;
+        message: string;
+      }>(
+        "/staff-auth/pin-reset-request",
+        { staffNumber }
+      );
+
+    return res.data;
+  },
+
+
+  // ==========================================
   // STAFF LOGIN
   // ==========================================
 

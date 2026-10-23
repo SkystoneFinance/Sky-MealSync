@@ -106,3 +106,13 @@ export function usePublishWeek(weekStart: string) {
     onSuccess: invalidate,
   });
 }
+
+export function useReopenForStaff(weekStart: string) {
+  const invalidate = useInvalidateMenuWeeks();
+
+  return useMutation({
+    mutationFn: (staffId: string) =>
+      mealPlanService.reopenForStaff(weekStart, staffId),
+    onSuccess: invalidate,
+  });
+}

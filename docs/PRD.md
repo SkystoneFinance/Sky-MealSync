@@ -41,7 +41,7 @@ entitled to a meal, and management has no record of consumption per person or de
 | AUTH-3 | Staff sign in with staff number + PIN. Inactive staff are refused. |
 | AUTH-4 | **Long-lived sessions:** users should not have to log in again while they keep using the app. Implemented as a 90-day sliding token, renewed automatically at most once a day. A session ends after 90 days without use, on logout, or if the account is deactivated. Network problems never end a session. |
 | AUTH-5 | Users can log out from the sidebar (with confirmation), e.g. on shared or lost devices. |
-| AUTH-6 | Forgotten PIN reset. _(Not implemented. **[Confirm]** the process — currently needs a DB change.)_ |
+| AUTH-6 | Forgotten PIN: staff tap "Forgot your PIN?" on sign-in, which notifies administrators. An administrator resets (clears) the PIN from the request or the Staff page; the staff member chooses a new one with "Activate your account". PINs can't be retrieved (stored hashed). |
 
 ### 4.2 Staff management (SUPER_ADMIN)
 | ID | Requirement |
@@ -60,7 +60,7 @@ entitled to a meal, and management has no record of consumption per person or de
 | MENU-2 | Edit, enable/disable and delete food options. Disabled options can't be newly selected. |
 | MENU-5 | **Own photos (switch-over, from 2026-10-21):** dishes start with a pasted internet image because the food doesn't exist yet. On the day, the chef photographs each dish in the app; the photo is kept per dish name and replaces the internet image everywhere that dish appears, now and in future. Expected: all regular dishes covered within ~3 weeks, after which pasting URLs can be retired. |
 | MENU-3 | See demand for any date: selection count and share per option. |
-| MENU-4 | **[Confirm]** SUPER_ADMIN currently cannot open Food Management (UI restriction only). |
+| MENU-4 | Both the kitchen (ADMIN) and administrators (SUPER_ADMIN) can edit the menu. |
 
 ### 4.4 Weekly meal planning
 
@@ -86,6 +86,8 @@ All times are **Africa/Lagos**. The schedule lives in `mealSync/src/modules/meal
 | PLAN-6 | **Meal Preparation Summary** (chef and SUPER_ADMIN): employees who submitted; per day, the count for each dish, meals required, "No meal required" and did-not-submit; the list of employees who didn't submit (marking those who never activated their login); each submitter's submission time. It is live until the hard close, then marked **Confirmed**. Exportable to Excel. |
 | PLAN-7 | At the scanner, staff who chose "No meal required" for today are refused with that reason. |
 | PLAN-8 | A dish that someone has chosen can't be deleted (disable it instead). |
+| PLAN-9 | **Late exception:** after the hard close and before the week starts, an administrator can reopen selection for one named staff member for 24 hours. Their submission is marked Late in the summary and the kitchen sees a note that numbers changed. |
+| PLAN-10 | Submitting with any open day blank is refused; each blank day is highlighted with "choose a meal or No meal required". |
 
 Notifications are in-app only (no email). The office also announces the menu on WhatsApp.
 
@@ -132,6 +134,7 @@ Notifications are in-app only (no email). The office also announces the menu on 
 6. Should the admin screens show live updates when someone is served (the API already emits `attendance:new`)?
 
 ## 7. Change log for this document
+- 2026-10-23 — AUTH-6 PIN resets, PLAN-9 reopen for one person, PLAN-10 blank-day errors, MENU-4 admins edit menus.
 - 2026-10-21 — MENU-5: own dish photos.
 - 2026-10-21 — PLAN-2: two planning weeks; read-only view of current/past weeks.
 - 2026-10-21 — 4.4 rewritten: weekly meal planning (publish Wed 17:00, staff deadline Thu 17:00, hidden close Thu 19:00, "No meal required", chef summary). Replaces the day-by-day lock.

@@ -87,6 +87,16 @@ export const mealPlanService = {
     return res.data;
   },
 
+  // Let one staff member who missed the deadline choose (admins only)
+  async reopenForStaff(weekStart: string, staffId: string) {
+    const res = await api.post<Envelope<{ expiresAt: string; message: string }>>(
+      `/menu-weeks/${weekStart}/reopen`,
+      { staffId }
+    );
+
+    return res.data;
+  },
+
   async getSummary(weekStart: string) {
     const res = await api.get<Envelope<MealPrepSummary>>(
       `/menu-weeks/${weekStart}/summary`
