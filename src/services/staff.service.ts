@@ -5,6 +5,7 @@ import type {
   ImportStaffResult,
   Staff,
   UpdateStaffPayload,
+  PinResetRequest,
 } from "../types/staff";
 
 interface ApiResponse<T> {
@@ -43,6 +44,28 @@ export const staffService = {
     );
 
     return response.data.data;
+  },
+
+  // Clears the PIN; the staff member re-activates with a new one
+  async resetPin(id: string) {
+    const response = await axios.post<{ success: boolean; message: string }>(
+      `/staff/${id}/reset-pin`
+    );
+    return response.data;
+  },
+
+  async getPinResetRequests() {
+    const response = await axios.get<ApiResponse<PinResetRequest[]>>(
+      "/staff/pin-reset-requests"
+    );
+    return response.data.data;
+  },
+
+  async dismissPinResetRequest(id: string) {
+    const response = await axios.post<{ success: boolean; message: string }>(
+      `/staff/pin-reset-requests/${id}/dismiss`
+    );
+    return response.data;
   },
 
   async delete(id: string) {

@@ -19,6 +19,7 @@ import StaffTable from "./staffTable";
 import AddStaffModal from "./AddStaffModal";
 import EditStaffModal from "./EditStaffModal";
 import ImportStaffModal from "./ImportStaffModal";
+import PinResetRequests from "./PinResetRequests";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -201,6 +202,8 @@ export default function Staff() {
         onCreate={() => setAddOpen(true)}
         onImport={() => setImportOpen(true)}
       />
+
+      <PinResetRequests />
 
       {renderContent()}
 

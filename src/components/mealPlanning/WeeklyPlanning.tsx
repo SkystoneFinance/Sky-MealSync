@@ -22,6 +22,7 @@ import {
   useMealPrepSummary,
   useMenuWeek,
   usePublishWeek,
+  useReopenForStaff,
   useSetClosedDays,
 } from "../../hooks/useMealPlan";
 
@@ -213,7 +214,7 @@ function DraftWeek({ week }: { week: MenuWeek }) {
         title="Menu"
         description="Check each day, mark any day the kitchen is closed, then publish."
         actions={
-          user?.role === "ADMIN" && (
+          (user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
             <Link to="/food-management" className={buttonStyles("secondary", "sm")}>
               Edit dishes
             </Link>
@@ -321,6 +322,13 @@ function SummaryWeek({ week }: { week: MenuWeek }) {
     <div className="space-y-6">
       {week.isPublished && !week.isClosed && <Announcement week={week} />}
 
+      {summary.submitted.some((s) => s.late) && (
+        <Callout tone="warning" icon={<TriangleAlert size={18} />} title="Late submissions">
+          {summary.submitted.filter((s) => s.late).length} staff submitted or changed their
+          meals after selection closed (reopened by an administrator). The numbers below include them.
+        </Callout>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           label={summary.isLegacy ? "Chose meals" : "Submitted"}
@@ -364,7 +372,7 @@ function SummaryWeek({ week }: { week: MenuWeek }) {
         </div>
       </Card>
 
-      <StaffLists summary={summary} />
+      <StaffLists summary={summary} week={week} />
     </div>
   );
 }
@@ -456,7 +464,39 @@ function Announcement({ week }: { week: MenuWeek }) {
   );
 }
 
-function StaffLists({ summary }: { summary: MealPrepSummary }) {
+function StaffLists({
+  summary,
+  week,
+}: {
+  summary: MealPrepSummary;
+  week: MenuWeek;
+}) {
+  const { user } = useAuth();
+  const reopen = useReopenForStaff(week.weekStart);
+
+  // After the close and before the week starts, admins can let one
+  // person who missed the deadline choose
+  const canReopen =
+    user?.role === "SUPER_ADMIN" &&
+    week.isPublished &&
+    week.isClosed &&
+    week.isPlanningWeek;
+
+  const handleReopen = (s: MealPrepSummary["notSubmitted"][number]) => {
+    if (
+      !window.confirm(
+        `Reopen meal selection for ${s.firstName} ${s.lastName}?\n\nThey'll be able to choose for this week for the next 24 hours (until the week starts at the latest). Their meals will be added to the totals and marked "Late". Let them and the kitchen know.`
+      )
+    ) {
+      return;
+    }
+
+    reopen.mutate(s.id, {
+      onSuccess: (res) => toast.success(res.message ?? "Reopened."),
+      onError: (error) => toast.error(apiErrorMessage(error)),
+    });
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>
@@ -477,6 +517,7 @@ function StaffLists({ summary }: { summary: MealPrepSummary }) {
                     {s.staffNumber} · {s.department}
                   </p>
                 </div>
+                {s.late && <Badge tone="warning">Late</Badge>}
                 <div className="text-right text-xs">
                   <p className="font-medium text-zinc-700">{formatTimestamp(s.submittedAt)}</p>
                   {s.edited && <p className="text-zinc-400">edited {formatTimestamp(s.updatedAt)}</p>}
@@ -507,7 +548,20 @@ function StaffLists({ summary }: { summary: MealPrepSummary }) {
                     {s.staffNumber} · {s.department}
                   </p>
                 </div>
-                {!s.hasActivatedAccount && <Badge>Never signed in</Badge>}
+                {!s.hasActivatedAccount ? (
+                  <Badge>Never signed in</Badge>
+                ) : s.reopenedUntil ? (
+                  <Badge tone="info">Reopened until {formatTimestamp(s.reopenedUntil)}</Badge>
+                ) : canReopen ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={reopen.isPending && reopen.variables === s.id}
+                    onClick={() => handleReopen(s)}
+                  >
+                    Reopen
+                  </Button>
+                ) : null}
               </li>
             ))}
           </ul>

@@ -131,6 +131,19 @@ function WeekView({ plan }: { plan: StaffMealPlan }) {
 function WeekStatus({ plan }: { plan: StaffMealPlan }) {
   const { week, submission, selections } = plan;
 
+  if (week.isOpen && week.reopenedUntil && !submission) {
+    return (
+      <Callout
+        tone="brand"
+        icon={<Clock size={18} />}
+        title={`Reopened for you until ${formatDeadline(week.reopenedUntil)}`}
+      >
+        An administrator reopened meal selection for you. Pick a meal, or
+        "No meal required", for each day and submit before then.
+      </Callout>
+    );
+  }
+
   if (week.isOpen && !submission) {
     return (
       <Callout
@@ -271,6 +284,8 @@ function PlanEditor({ plan }: { plan: StaffMealPlan }) {
   const { week, days, submission } = plan;
   const submitPlan = useSubmitMealPlan();
   const [edits, setEdits] = useState<Choices>({});
+  // After a submit attempt with blank days, outline them in red
+  const [showMissing, setShowMissing] = useState(false);
 
   const saved: Choices = useMemo(() => {
     const result: Choices = {};
@@ -289,7 +304,16 @@ function PlanEditor({ plan }: { plan: StaffMealPlan }) {
 
   const handleSubmit = () => {
     if (remaining.length) {
-      toast.error(`Choose a meal or "No meal required" for ${formatDay(remaining[0].date)}.`);
+      setShowMissing(true);
+      toast.error(
+        remaining.length === 1
+          ? `${formatDay(remaining[0].date)} is blank. Choose a meal, or "No meal required" if you won't eat that day.`
+          : `${remaining.length} days are blank. Choose a meal, or "No meal required", for every day.`,
+        { duration: 6000 }
+      );
+      document
+        .getElementById(`day-${remaining[0].date}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
 
@@ -318,6 +342,7 @@ function PlanEditor({ plan }: { plan: StaffMealPlan }) {
           <DayPicker
             key={day.date}
             day={day}
+            missing={showMissing && !day.closed && !choices[day.date]}
             choice={choices[day.date]}
             onChoose={(value) => setEdits((current) => ({ ...current, [day.date]: value }))}
           />
@@ -326,7 +351,7 @@ function PlanEditor({ plan }: { plan: StaffMealPlan }) {
 
       <div className="sticky bottom-0 z-10 -mx-4 border-t border-zinc-200 bg-white/90 px-4 py-3 backdrop-blur sm:bottom-4 sm:mx-0 sm:rounded-xl sm:border sm:shadow-pop">
         <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-zinc-600">
+          <p className={cn("text-sm", showMissing && remaining.length ? "font-medium text-red-700" : "text-zinc-600")}>
             {remaining.length
               ? `${openDays.length - remaining.length} of ${openDays.length} days chosen`
               : submission && !hasChanges
@@ -350,24 +375,35 @@ function PlanEditor({ plan }: { plan: StaffMealPlan }) {
 function DayPicker({
   day,
   choice,
+  missing,
   onChoose,
 }: {
   day: PlanDay;
   choice?: string;
+  missing: boolean;
   onChoose: (value: string) => void;
 }) {
   return (
-    <Card>
+    <div id={`day-${day.date}`} className="scroll-mt-24">
+    <Card className={missing ? "border-red-300 ring-2 ring-red-500/20" : undefined}>
       <div className="flex items-center justify-between gap-3 border-b border-zinc-100 px-5 py-3.5">
         <h2 className="font-semibold text-zinc-900">{formatDay(day.date)}</h2>
         {day.closed ? (
           <Badge>Kitchen closed</Badge>
         ) : choice ? (
           <Badge tone="success" icon={<Check size={12} />}>Chosen</Badge>
+        ) : missing ? (
+          <Badge tone="danger">Required</Badge>
         ) : (
           <Badge tone="warning">To choose</Badge>
         )}
       </div>
+
+      {missing && (
+        <p className="border-b border-red-100 bg-red-50 px-5 py-2.5 text-sm text-red-800">
+          Choose a meal, or “No meal required” if you won't be eating. Days can't be left blank.
+        </p>
+      )}
 
       {day.closed ? (
         <p className="flex items-center gap-2 px-5 py-5 text-sm text-zinc-500">
@@ -409,6 +445,7 @@ function DayPicker({
         </div>
       )}
     </Card>
+    </div>
   );
 }
 

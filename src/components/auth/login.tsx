@@ -24,7 +24,7 @@ import {
 } from "../ui";
 
 type Mode = "staff" | "admin";
-type StaffStep = "login" | "activate";
+type StaffStep = "login" | "activate" | "forgot";
 
 const digitsOnly = (value: string) => value.replace(/\D/g, "").slice(0, 4);
 
@@ -42,6 +42,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [reveal, setReveal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState<string | null>(null);
 
   if (user) {
     return <Navigate to="/" replace />;
@@ -142,6 +143,31 @@ export default function Login() {
     }
   }
 
+  async function handleForgot(event: FormEvent) {
+    event.preventDefault();
+
+    if (!staffNumber.trim()) {
+      toast.error("Enter your staff number.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await authService.requestPinReset(staffNumber.trim());
+      setResetSent(result.message);
+    } catch (error) {
+      toast.error(apiErrorMessage(error, "We couldn't send your request."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const goTo = (step: StaffStep) => {
+    setStaffStep(step);
+    setResetSent(null);
+    resetSecrets();
+  };
+
   const pinToggle = (
     <button
       type="button"
@@ -157,8 +183,10 @@ export default function Login() {
     mode === "admin"
       ? { title: "Sign in", text: "Kitchen and administrator accounts." }
       : staffStep === "activate"
-        ? { title: "Activate your account", text: "First time here? Choose a 4-digit PIN to sign in with." }
-        : { title: "Sign in", text: "Use your staff number and 4-digit PIN." };
+        ? { title: "Activate your account", text: "First time here, or your PIN was reset? Choose a 4-digit PIN to sign in with." }
+        : staffStep === "forgot"
+          ? { title: "Forgot your PIN?", text: "We'll ask an administrator to reset it. PINs can't be recovered, only replaced." }
+          : { title: "Sign in", text: "Use your staff number and 4-digit PIN." };
 
   return (
     <div className="flex min-h-dvh flex-col bg-zinc-50">
@@ -177,8 +205,7 @@ export default function Login() {
               value={mode}
               onChange={(value) => {
                 setMode(value);
-                setStaffStep("login");
-                resetSecrets();
+                goTo("login");
               }}
               options={[
                 { value: "staff", label: "Staff" },
@@ -222,6 +249,47 @@ export default function Login() {
                   Sign in
                 </Button>
               </form>
+            ) : staffStep === "forgot" ? (
+              resetSent ? (
+                <div className="mt-6 space-y-4">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                    {resetSent}
+                  </div>
+                  <Button variant="secondary" size="lg" className="w-full" onClick={() => goTo("activate")}>
+                    My PIN was reset: activate account
+                  </Button>
+                  <button
+                    type="button"
+                    className="block w-full text-center text-sm font-medium text-brand-600 hover:text-brand-700"
+                    onClick={() => goTo("login")}
+                  >
+                    Back to sign in
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgot} className="mt-6 space-y-4">
+                  <Field label="Staff number" htmlFor="forgotStaffNumber">
+                    <Input
+                      id="forgotStaffNumber"
+                      autoCapitalize="characters"
+                      leading={<IdCard size={16} />}
+                      placeholder="e.g. AD001"
+                      value={staffNumber}
+                      onChange={(e) => setStaffNumber(e.target.value.toUpperCase())}
+                    />
+                  </Field>
+                  <Button type="submit" size="lg" className="w-full" loading={loading}>
+                    Request a PIN reset
+                  </Button>
+                  <button
+                    type="button"
+                    className="block w-full pt-1 text-center text-sm font-medium text-brand-600 hover:text-brand-700"
+                    onClick={() => goTo("login")}
+                  >
+                    Back to sign in
+                  </button>
+                </form>
+              )
             ) : (
               <form
                 onSubmit={staffStep === "login" ? handleStaffLogin : handleActivate}
@@ -240,7 +308,22 @@ export default function Login() {
                 </Field>
 
                 <Field
-                  label={staffStep === "activate" ? "Choose a PIN" : "PIN"}
+                  label={
+                    staffStep === "activate" ? (
+                      "Choose a PIN"
+                    ) : (
+                      <span className="flex items-center justify-between">
+                        PIN
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-brand-600 hover:text-brand-700"
+                          onClick={() => goTo("forgot")}
+                        >
+                          Forgot your PIN?
+                        </button>
+                      </span>
+                    )
+                  }
                   htmlFor="pin"
                 >
                   <div className="relative">
@@ -284,10 +367,7 @@ export default function Login() {
                   <button
                     type="button"
                     className="font-medium text-brand-600 hover:text-brand-700"
-                    onClick={() => {
-                      setStaffStep(staffStep === "login" ? "activate" : "login");
-                      resetSecrets();
-                    }}
+                    onClick={() => goTo(staffStep === "login" ? "activate" : "login")}
                   >
                     {staffStep === "login" ? "Activate your account" : "Sign in"}
                   </button>

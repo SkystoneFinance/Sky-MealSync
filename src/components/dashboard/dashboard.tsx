@@ -4,6 +4,7 @@ import StatsSection from "./statsSection";
 import RecentAttendance from "./RecentAttendance";
 import PlanningBanner from "../mealPlanning/PlanningBanner";
 import TodayPhotos from "../foodManagement/TodayPhotos";
+import PinRequestsBanner from "../stafff/PinRequestsBanner";
 
 import { Callout, PageHeader } from "../ui";
 import { useDashboard } from "../../hooks/useDashboard";
@@ -47,6 +48,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <PageHeader eyebrow={greeting(now)} title="Overview" description={today} />
 
+      <PinRequestsBanner />
       <PlanningBanner />
       <TodayPhotos />
 

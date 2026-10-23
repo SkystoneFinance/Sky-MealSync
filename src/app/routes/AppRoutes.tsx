@@ -67,9 +67,9 @@ export default function AppRoutes() {
             <Route path="staff" element={<Staffs />} />
           </Route>
 
-          {/* KITCHEN */}
+          {/* KITCHEN + ADMIN: menu editing */}
           <Route
-            element={<RoleRoute allowedRoles={["ADMIN"]} />}
+            element={<RoleRoute allowedRoles={["ADMIN", "SUPER_ADMIN"]} />}
           >
             <Route path="food-management" element={<FoodManagement />} />
           </Route>

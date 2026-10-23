@@ -28,7 +28,7 @@ from the frontend env var `VITE_API_URL`.
 
 | Role | Who | Logs in with | Can do |
 |---|---|---|---|
-| `SUPER_ADMIN` | HR / system owner | email + password | Overview, weekly planning, served today, reports, scan, **staff** |
+| `SUPER_ADMIN` | HR / system owner | email + password | Overview, weekly planning, menu, served today, reports, scan, **staff** (incl. PIN resets, reopening late choices) |
 | `ADMIN` | Kitchen / chef | email + password | Overview, weekly planning, **menu**, scan, served today |
 | `USER` | Any employee | staff number + 4-digit PIN | Home, **my meals** (choose up to 2 weeks ahead, view past weeks), my QR code |
 
